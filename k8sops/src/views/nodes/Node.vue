@@ -1,5 +1,4 @@
 <template >
-      <div v-if="!showtable">
         <el-table
           :data="tableData"
           :default-sort="{ prop: 'date', order: 'descending' }"
@@ -31,8 +30,6 @@
           <el-table-column prop="status.nodeInfo.kubeletVersion" label="版本" width="100" />
           <el-table-column prop="status.nodeInfo.containerRuntimeVersion" label="镜像驱动" width="160" />
         </el-table>
-     </div>
-     <RouterView></RouterView>
 </template>
     
 <script>
@@ -46,19 +43,11 @@
           memory:{},
         },
         msg: 'test message',
-        showtable:false
       }
     },
     created(){
             this.GetNodelistaxios()
         },
-    mounted(){
-      onMounted(() => {
-      this.GetNodelistaxios()
-      this.showtable=false
-      console.log('页面已刷新')
-     })
-    },
     methods: {
       formatter(row, column) {
         return row.address;
@@ -101,13 +90,12 @@
       handle(row,column,event,cell){
         
         this.$router.push({
-          path:'/cluster/node/node_detail',
+          path:'/cluster/node_detail',
           name:'node详情',
           query:{
             nodename:row.metadata.name
           }
         })
-        this.showtable=true
       },
     }
 }

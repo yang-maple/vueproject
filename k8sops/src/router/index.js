@@ -55,14 +55,13 @@ const routes=[
                 component:()=>import('@/views/nodes/Node.vue'),
                 name:'Node 节点',
                 meta:{title:'Node',requireAuth:true}, 
-                children:[
-                    {
-                        path:'/cluster/node/node_detail',   
-                        name:'node详情',                    
-                        component:()=>import('@/views/nodes/Nodedetail.vue'),
-                        meta:{title:'集群资源',requireAuth:true},
-                    },
-                ]
+            },
+            {
+                path:'/cluster/node_detail',   
+                name:'node详情',
+                icon:'LocationInformation',                    
+                component:()=>import('@/views/nodes/Nodedetail.vue'),
+                meta:{title:'集群资源',requireAuth:true},
             },
             {
                 path:'/cluster/namespaces',
