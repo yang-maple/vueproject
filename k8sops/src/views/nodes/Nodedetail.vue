@@ -1,4 +1,9 @@
 <template>
+  <div>NodeName &nbsp;&nbsp;&nbsp;
+    <el-select v-model="value" class="m-2" :placeholder="nodenames" size="large" @change="changeSelect">
+      <el-option v-for="item in nodelist" :key="item.value" :label="item.label" :value="item.value" />
+    </el-select>
+  </div>
   <div class="demo-collapse">
     <el-collapse v-model="activeNames">
       <el-collapse-item title="Consistency" name="1">
@@ -24,7 +29,8 @@
         </el-descriptions>
         <el-descriptions>
           <el-descriptions-item label="Taints">
-            <el-tag size="small" v-for="(v, k) in spec.taints " :key="k">{{ v.key }}:{{ v.effect }}&nbsp;&nbsp;</el-tag>
+            <el-tag size="small" v-for="(v, k) in spec.taints " :key="k">{{ v.key }}:{{ v.effect
+            }}&nbsp;&nbsp;</el-tag>
           </el-descriptions-item>
         </el-descriptions>
       </el-collapse-item>
@@ -40,9 +46,11 @@
           <el-descriptions-item label="Container runtime version">{{ status.nodeInfo.containerRuntimeVersion
           }}</el-descriptions-item>
           <el-descriptions-item label="kubelet version">{{ status.nodeInfo.kubeletVersion }}</el-descriptions-item>
-          <el-descriptions-item label="kube-proxy version">{{ status.nodeInfo.kubeProxyVersion }}</el-descriptions-item>
+          <el-descriptions-item label="kube-proxy version">{{ status.nodeInfo.kubeProxyVersion
+          }}</el-descriptions-item>
           <el-descriptions-item label="Architecture">{{ status.nodeInfo.architecture }}</el-descriptions-item>
-          <el-descriptions-item label="Operating system">{{ status.nodeInfo.operatingSystem }}</el-descriptions-item>
+          <el-descriptions-item label="Operating system">{{ status.nodeInfo.operatingSystem
+          }}</el-descriptions-item>
           <el-descriptions-item label="CPU capacity">{{ status.allocatable.cpu }}</el-descriptions-item>
           <el-descriptions-item label="Memory capacity">{{ memory }}</el-descriptions-item>
           <el-descriptions-item label="Pods capacity">{{ status.allocatable.pods }}</el-descriptions-item>
@@ -68,16 +76,16 @@
       <el-collapse-item title="Pods" name="5">
 
         <el-table :data="pods" stripe style="width: 100%">
-          <el-table-column prop="Name" label="Date" width="180" />
-          <el-table-column prop="Image" label="Name" width="180" />
-          <el-table-column label="Address" width="300">
+          <el-table-column prop="Name" label="Name" width="300" />
+          <el-table-column prop="Image" label="Image" width="400" />
+          <el-table-column label="Lables" width="300">
             <template #default="scope">
               <el-tag size="small" v-for="(v, k) in scope.row.Labels " :key="k">{{ k }}:{{ v }}<br></el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="Status" label="Date" width="180" />
-          <el-table-column prop="Restart" label="Name" width="180" />
-          <el-table-column prop="PodAge" label="Address" min-width="180" />
+          <el-table-column prop="Status" label="Status" width="100" />
+          <el-table-column prop="Restart" label="Restart" width="100" />
+          <el-table-column prop="PodAge" label="Age" min-width="100" />
         </el-table>
 
       </el-collapse-item>
@@ -86,13 +94,12 @@
 </template>
 
 <script>
-import { onMounted } from 'vue'
 import * as echarts from 'echarts';
 export default {
   name: '',
   data() {
     return {
-      nodenames: 'k8s-master1',
+      nodenames: '',
       node: {},
       metadata: {},
       spec: {},
@@ -108,28 +115,9 @@ export default {
         total: 1,
         cpu: 1
       },
-      tableData: [
-        {
-          date: '2016-05-03',
-          name: 'Tom',
-          address: 'No. 189, Grove St, Los Angeles',
-        },
-        {
-          date: '2016-05-02',
-          name: 'Tom',
-          address: 'No. 189, Grove St, Los Angeles',
-        },
-        {
-          date: '2016-05-04',
-          name: 'Tom',
-          address: 'No. 189, Grove St, Los Angeles',
-        },
-        {
-          date: '2016-05-01',
-          name: 'Tom',
-          address: 'No. 189, Grove St, Los Angeles',
-        },
-      ]
+      value: '',
+      nodelist: [],
+
     }
   },
   created() {
@@ -140,13 +128,24 @@ export default {
     this.getchart(this.result);//定义一个接口方法在methods中调用 
   },
   methods: {
+    //获取路由参数的方法
     getParams() {
       // 取到路由带过来的参数 
       let routerParams = this.$route.query.nodename
       // 将数据放在当前组件的数据内
       this.nodenames = routerParams
+      // 获取nodenamelist
+      this.$ajax.get("/node/list").then((res) => {
+        res.data.node_name.forEach(v => {
+          this.nodelist.push({ 'value': v.metadata.name, 'label': v.metadata.name })
+        })
+      }).catch(function (res) {
+        console.log(res)
+      })
     },
+    //获取node详情的方法
     getNodedetail() {
+      //获取单个node 详情
       this.$ajax({
         method: 'get',
         url: '/node/detail',
@@ -160,13 +159,15 @@ export default {
         this.age = res.data.age
         this.memory = res.data.memory_allocator
         this.pods = res.data.pods
-        console.log(res.data)
-        console.log(this.status.nodeInfo.machineID)
       }).catch(function (res) {
-        console.log(res.data);
+        console.log(res);
       })
     },
-
+    //select 选中跳转的方法
+    changeSelect(val) {
+      this.nodenames = val
+      this.getNodedetail()
+    },
     //图表方法
     getchart(result) {
       //获取id并初始化图表
