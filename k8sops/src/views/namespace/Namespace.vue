@@ -21,11 +21,16 @@
                     </el-table-column>
                     <el-table-column label="Status" prop="status" width="180" />
                     <el-table-column label="Age" prop="age" width="180" />
-                    <el-table-column label="Operations" width="">
+                    <el-table-column label="Operations" width="320">
                         <template #default="scope">
                             <el-button type="primary" icon="Edit" plain
                                 @click="dialogFormVisible = true, handleEdit(scope.$index, scope.row)" />
-                            <el-button type="danger" icon="Delete" plain @click="handleDelete(scope.$index, scope.row)" />
+                            <el-popconfirm width="230" confirm-button-text="OK" cancel-button-text="No, Thanks"
+                                icon="InfoFilled" icon-color="#626AEF" title="Are you sure to delete this?"
+                                @confirm="handleDelete(scope.row)"><template #reference>
+                                    <el-button type="danger" icon="Delete" plain />
+                                </template>
+                            </el-popconfirm>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -51,16 +56,37 @@
                     </template>
                 </el-dialog>
             </div>
+            <el-button type="primary" @click="dialogcreatens = true">
+                创建名称空间
+            </el-button>
+            <el-dialog v-model="dialogcreatens" title="创建名称空间">
+                <el-form :model="form">
+                    <el-form-item label="名称" :label-width="formLabelWidth">
+                        <el-input v-model="form.newnamespaces" autocomplete="off" />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button type="primary" @click="dialogcreatens = false, createNamespace()">确认创建</el-button>
+                        <el-button type="danger" @click="dialogcreatens = false">
+                            取消
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
         </el-col>
     </el-row>
 </template>
 
 <script scoped>
+import { ElLoading } from 'element-plus'
 export default {
+    inject: ['reload'],
     data() {
         return {
             namespacesItem: [],
             dialogFormVisible: false,
+            dialogcreatens: false,
             form: {
                 name: '',
                 region: '',
@@ -69,7 +95,8 @@ export default {
                 delivery: false,
                 type: [],
                 resource: '',
-                desc: ''
+                desc: '',
+                newnamespaces: '',
             },
             formLabelWidth: '140px'
         }
@@ -92,8 +119,26 @@ export default {
                 console.log(res.data);
             })
         },
-        handleDelete(index, row) {
-            console.log(index, row);
+        handleDelete(row) {
+            this.$ajax({
+                method: 'delete',
+                url: '/namespaces/delete',
+                params: {
+                    namespace_name: row.name
+                }
+            }
+            ).then((res) => {
+                this.Loading("Deleting")
+                this.$message({
+                    showClose: true,
+                    message: res.msg,
+                    type: 'warning'
+                });
+            }).catch(function (res) {
+                console.log(res);
+            })
+            this.reload()
+
         },
         getNamespaces() {
             this.$ajax({
@@ -105,6 +150,34 @@ export default {
             }).catch(function (res) {
                 console.log(res);
             })
+        },
+        createNamespace() {
+            this.$ajax.post(
+                '/namespaces/create',
+                {
+                    namespace_name: this.form.newnamespaces
+                },
+            ).then((res) => {
+                this.Loading("Creating")
+                this.$message({
+                    message: res.msg,
+                    type: 'success'
+                });
+                console.log(res)
+            }).catch(function (res) {
+                console.log(res);
+            })
+            this.reload()
+        },
+        Loading(msg) {
+            const loading = ElLoading.service({
+                lock: true,
+                text: msg,
+                background: 'rgba(0, 0, 0, 0.7)',
+            })
+            setTimeout(() => {
+                loading.close()
+            }, 2000)
         }
     }
 }
@@ -153,10 +226,14 @@ export default {
 }
 
 .el-input {
-    width: 300px;
+    width: 400px;
 }
 
-.dialog-footer button:first-child {
-    margin-right: 10px;
+.button:first-child {
+    margin-right: 410px;
+}
+
+.dialog-footer {
+    margin-right: 410px;
 }
 </style>

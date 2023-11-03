@@ -14,16 +14,17 @@ import 'element-plus/dist/index.css'
 //导入图标视图
 import * as ElIcons from '@element-plus/icons-vue'
 
+
 import 'default-passive-events'
-const app=createApp(App)
+const app = createApp(App)
 app.use(router)
 app.mount('#app')
 
 // 将图标引入成全局组件
-for (let iconName in ElIcons){
-    app.component(iconName,ElIcons[iconName])
+for (let iconName in ElIcons) {
+    app.component(iconName, ElIcons[iconName])
 }
 
 // 引用 element-plus
 app.use(ElementPlus)
-app.config.globalProperties.$ajax=axiosjs
+app.config.globalProperties.$ajax = axiosjs
