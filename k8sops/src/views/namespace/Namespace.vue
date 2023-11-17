@@ -34,23 +34,14 @@
                         </template>
                     </el-table-column>
                 </el-table>
-                <el-dialog v-model="dialogFormVisible" title="Shipping address">
-                    <el-form :model="form">
-                        <el-form-item label="Promotion name" :label-width="formLabelWidth">
-                            <el-input v-model="form.name" autocomplete="off" />
-                        </el-form-item>
-                        <el-form-item label="Zones" :label-width="formLabelWidth">
-                            <el-select v-model="form.region" placeholder="Please select a zone">
-                                <el-option label="Zone No.1" value="shanghai" />
-                                <el-option label="Zone No.2" value="beijing" />
-                            </el-select>
-                        </el-form-item>
-                    </el-form>
+                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                    <json-editor-vue v-loading="bookingLoad" :show-btns="false" :mode="'code'" style="height:400px"
+                        lang="zh" class="editor" v-model="data" height="400px" />
                     <template #footer>
                         <span class="dialog-footer">
-                            <el-button @click="dialogFormVisible = false">Cancel</el-button>
-                            <el-button type="primary" @click="dialogFormVisible = false">
-                                Confirm
+                            <el-button type="primary" @click="dialogFormVisible = false, updateNamespace()">更新</el-button>
+                            <el-button @click="dialogFormVisible = false">
+                                取消
                             </el-button>
                         </span>
                     </template>
@@ -59,7 +50,7 @@
             <el-button type="primary" @click="dialogcreatens = true">
                 创建名称空间
             </el-button>
-            <el-dialog v-model="dialogcreatens" title="创建名称空间">
+            <el-dialog v-model="dialogcreatens" title="创建名称空间" center>
                 <el-form :model="form">
                     <el-form-item label="名称" :label-width="formLabelWidth">
                         <el-input v-model="form.newnamespaces" autocomplete="off" />
@@ -80,10 +71,15 @@
 
 <script scoped>
 import { ElLoading } from 'element-plus'
+import JsonEditorVue from 'json-editor-vue3'
 export default {
     inject: ['reload'],
+    components: {
+        JsonEditorVue
+    },
     data() {
         return {
+            data: {},
             namespacesItem: [],
             dialogFormVisible: false,
             dialogcreatens: false,
@@ -114,7 +110,8 @@ export default {
                     namespace_name: row.name
                 }
             }).then((res) => {
-                console.log(res.data)
+                this.data = res.data
+                console.log(res.data);
             }).catch(function (res) {
                 console.log(res.data);
             })
@@ -146,7 +143,6 @@ export default {
                 url: '/namespaces/list',
             }).then((res) => {
                 this.namespacesItem = res.data.item
-                console.log(this.namespacesItem)
             }).catch(function (res) {
                 console.log(res);
             })
@@ -165,6 +161,30 @@ export default {
                 });
                 console.log(res)
             }).catch(function (res) {
+                console.log(res);
+            })
+            this.reload()
+        },
+        updateNamespace() {
+            this.Loading("Updateing")
+            this.$ajax.put(
+                '/namespaces/update',
+                {
+                    data: this.data
+                },
+            ).then((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.msg,
+                    type: 'success'
+                });
+                console.log(res)
+            }).catch((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.msg + res.reason,
+                    type: 'error'
+                });
                 console.log(res);
             })
             this.reload()
@@ -229,11 +249,11 @@ export default {
     width: 400px;
 }
 
-.button:first-child {
-    margin-right: 410px;
+.dialog-footer button:first-child {
+    margin-right: 10px;
 }
 
-.dialog-footer {
-    margin-right: 410px;
+.el-dialog--center .el-dialog__body {
+    min-height: 400px;
 }
 </style>
