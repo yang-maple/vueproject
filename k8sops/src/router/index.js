@@ -41,11 +41,34 @@ const routes = [
                 meta: { title: 'Pod', requireAuth: true },
             },
             {
+                path: '/workload/daemonset',
+                name: "daemonset",
+                component: () => import('@/views/daemonset/Daemonset.vue'),
+                icon: 'el-icon-s-data',
+                meta: { title: 'Daemonset', requireAuth: true },
+            },
+            {
+                path: '/workload/statefulset',
+                name: "Statefulset",
+                component: () => import('@/views/statefulset/Statefulset.vue'),
+                icon: 'el-icon-s-data',
+                meta: { title: 'Statefulset', requireAuth: true },
+            },
+            {
                 path: '/workload/pod/shell',
                 name: 'shell',
                 component: () => import('@/views/pod/Xtrem.vue'),
                 meta: {
                     title: 'shell',
+                    requireAuth: false
+                }
+            },
+            {
+                path: '/workload/pod/log',
+                name: 'logs',
+                component: () => import('@/views/pod/Xlogs.vue'),
+                meta: {
+                    title: 'logs',
                     requireAuth: false
                 }
             }
@@ -85,6 +108,72 @@ const routes = [
                 component: () => import('@/views/PersistentVolume/PersistentVolumes.vue'),
                 name: 'PersistentVolume 资源',
                 meta: { title: 'PersistentVolume', requireAuth: true },
+            }
+        ]
+    },
+    {
+        path: '/sever',
+        component: layout,
+        name: '服务资源',
+        icon: "Menu",
+        meta: { title: '服务资源', requireAuth: true },
+        children: [
+            {
+                path: '/sever/services',
+                icon: 'LocationInformation',
+                component: () => import('@/views/service/Service.vue'),
+                name: 'Services',
+                meta: { title: 'Services', requireAuth: true },
+            },
+            {
+                path: '/sever/ingress',
+                icon: 'LocationInformation',
+                component: () => import('@/views/service/Ingress.vue'),
+                name: 'Ingress',
+                meta: { title: 'Ingress', requireAuth: true },
+            }, {
+                path: '/sever/storageclass',
+                icon: 'LocationInformation',
+                component: () => import('@/views/service/Class.vue'),
+                name: 'Storageclass',
+                meta: { title: 'Storageclass', requireAuth: true },
+            }
+        ]
+    },
+    {
+        path: '/configure',
+        component: layout,
+        name: '配置与存储',
+        icon: "Menu",
+        meta: { title: '配置与存储', requireAuth: true },
+        children: [
+            {
+                path: '/configure/persistenvolumeclaim',
+                icon: 'LocationInformation',
+                component: () => import('@/views/storage/Persistenvolumeclaim.vue'),
+                name: 'PersistenVolumeClaim',
+                meta: { title: 'PersistenVolumeClaim', requireAuth: true },
+            },
+            {
+                path: '/configure/configmap',
+                icon: 'LocationInformation',
+                component: () => import('@/views/storage/Configmap.vue'),
+                name: 'Config Map',
+                meta: { title: 'Config Map', requireAuth: true },
+            },
+            {
+                path: '/configure/secret',
+                icon: 'LocationInformation',
+                component: () => import('@/views/storage/Secret.vue'),
+                name: 'Secret',
+                meta: { title: 'Secret', requireAuth: true },
+            },
+            {
+                path: '/configure/storageclass',
+                icon: 'LocationInformation',
+                component: () => import('@/views/storage/Class.vue'),
+                name: 'StorageClass',
+                meta: { title: 'StorageClass', requireAuth: true },
             }
         ]
     },

@@ -10,18 +10,18 @@
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
                                 <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getDeployment()" clearable>
+                                    @visible-change="getnsselect()" @change="getDaemonset()" clearable>
                                     <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
                                         :value="item.namespace" style="width:100%" />
                                 </el-select>
                             </div>
                         </el-col>
                         <el-col :span="6">
-                            <div class="grid-content1 ep-bg-purple">
-                                <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 20px;">
+                            <!-- <div class="grid-content1 ep-bg-purple">
+                                <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 18px;">
                                     创建deployment 资源
                                 </el-button>
-                            </div>
+                            </div> -->
                         </el-col>
                         <el-col :span="6"></el-col>
                         <el-col :span="6">
@@ -29,14 +29,14 @@
                                 <el-input v-model="filter_name" placeholder="Please input" class="input-with-select"
                                     clearable>
                                     <template #prepend>
-                                        <el-button icon="Search" @click="getDeployment()" />
+                                        <el-button icon="Search" @click="getDaemonset()" />
                                     </template>
                                 </el-input>
                             </div>
                         </el-col>
                     </el-row>
                 </el-col>
-                <el-table :data="deploymentItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
+                <el-table :data="daemonsetItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
                     size="small">
                     <el-table-column label="Name" width="200">
                         <template #default="scope">
@@ -44,25 +44,25 @@
                                 <el-icon>
                                     <timer />
                                 </el-icon>
-                                <span style="margin-left: 10px">{{ scope.row.name }}</span>
+                                <span style="margin-left: 5px">{{ scope.row.name }}</span>
                             </div>
                         </template>
                     </el-table-column>
                     <el-table-column label="Namespace" prop="namespaces" width="150" />
-                    <el-table-column label="Images" width="200" align="center">
+                    <el-table-column label="Images" width="210" align="center">
                         <template #default="scope">
                             <div v-for="(v, k) in scope.row.image " :key="k">{{ v }}<br></div>
                         </template>
                     </el-table-column>
-                    <el-table-column label="labels" width="300" align="center">
+                    <el-table-column label="labels" width="280" align="center">
                         <template #default="scope">
                             <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
                             }}<br></el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column label="Status" prop="status" width="100" />
-                    <el-table-column label="Pods" prop="pods" width="70" />
-                    <el-table-column label="Age" prop="age" width="50" />
+                    <el-table-column label="Pods" prop="pods" width="70" align="center" />
+                    <el-table-column label="Age" prop="age" width="60" align="center" />
                     <el-table-column label="Operations" align="center">
                         <template #default="scope">
                             <el-dropdown>
@@ -73,11 +73,7 @@
                                     <el-dropdown-menu>
                                         <el-dropdown-item icon="Edit"
                                             @click="dialogFormVisible = true, handleEdit(scope.row.namespaces, scope.row.name)">编辑</el-dropdown-item>
-                                        <el-dropdown-item icon="DocumentAdd" @click="messageboxReplica(scope.row)">
-                                            副本
-                                        </el-dropdown-item>
-                                        <el-dropdown-item icon="Refresh"
-                                            @click="messageboxOperate(scope.row, 'restart')">重启</el-dropdown-item>
+
                                         <el-dropdown-item icon="Delete"
                                             @click="messageboxOperate(scope.row, 'delete')">删除</el-dropdown-item>
                                     </el-dropdown-menu>
@@ -118,7 +114,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog v-model="dialogcreatens" title="创建资源" center>
+            <!-- <el-dialog v-model="dialogcreatens" title="创建资源" center>
                 <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm"
                     status-icon>
                     <el-form-item label="名称" prop="name">
@@ -200,7 +196,7 @@
                         </el-button>
                     </el-form-item>
                 </el-form>
-            </el-dialog>
+            </el-dialog> -->
 
         </el-col>
     </el-row>
@@ -221,7 +217,7 @@ export default {
             },
             dialogFormVisible: false,
             dialogcreatens: false,
-            deploymentItem: [],
+            daemonsetItem: [],
             filter_name: '',
             namespace: '',
             limit: 10,
@@ -270,13 +266,13 @@ export default {
         }
     },
     created() {
-        this.getDeployment()
+        this.getDaemonset()
     },
     methods: {
-        getDeployment() {
+        getDaemonset() {
             this.$ajax({
                 method: 'get',
-                url: '/deploy/list',
+                url: '/daemon/list',
                 params: {
                     filter_name: this.filter_name,
                     namespace: this.namespace,
@@ -286,28 +282,10 @@ export default {
             }).then((res) => {
                 console.log(res.data.item)
                 this.total = res.data.total
-                this.deploymentItem = res.data.item
+                this.daemonsetItem = res.data.item
             }).catch(function (res) {
                 console.log(res);
             })
-        },
-        createDeployment() {
-            this.$ajax.post(
-                '/deploy/create',
-                {
-                    data: this.ruleForm
-                },
-            ).then((res) => {
-                this.Loading("Creating")
-                this.$message({
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch(function (res) {
-                console.log(res);
-            })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -318,6 +296,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
@@ -336,18 +315,18 @@ export default {
         },
         handleSizeChange(limit) {
             this.limit = limit
-            this.getDeployment()
+            this.getDaemonset()
         },
         handleCurrentChange(page) {
             this.page = page
-            this.getDeployment()
+            this.getDaemonset()
         },
         handleEdit(namespace, name) {
             this.$ajax({
                 method: 'get',
-                url: '/deploy/detail',
+                url: '/daemon/detail',
                 params: {
-                    deploy_name: name,
+                    daemon_name: name,
                     namespace: namespace
                 }
             }).then((res) => {
@@ -357,64 +336,13 @@ export default {
                 console.log(res.data);
             })
         },
-        handleReplica(namespace, name, replicas) {
-            this.$ajax.put(
-                '/deploy/modify',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                    replicas: replicas
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-        },
-        handleRestart(namespace, name) {
-            this.Loading("Restarting······")
-            this.$ajax.post(
-                '/deploy/restart',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-
-        },
         handleDelete(namespace, name) {
-            this.Loading("Deleting······")
             this.$ajax({
                 method: 'delete',
-                url: '/deploy/delete',
+                url: '/daemon/delete',
                 params: {
                     namespace: namespace,
-                    deploy_name: name
+                    daemon_name: name
                 }
             }
             ).then((res) => {
@@ -427,20 +355,16 @@ export default {
             }).catch(function (res) {
                 console.log(res);
             })
-            this.reload()
-
         },
         handleUpdate(namespace) {
-            console.log(namespace);
-            console.log(this.data.metadata.namespace);
-            this.Loading("Updateing")
             this.$ajax.put(
-                '/deploy/update',
+                '/daemon/update',
                 {
                     namespace: namespace,
                     data: this.data
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -455,24 +379,6 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
-        },
-        messageboxReplica(row) {
-            this.$prompt('修改的副本数为', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                inputType: "number",
-                inputPattern: /^([1-9]|[1-9][0-9]|0?[0-9])$/,
-                inputErrorMessage: '副本的数量范围 0-99'
-            }).then(({ value }) => {
-                this.handleReplica(row.namespaces, row.name, parseInt(value))
-                console.log(value)
-            }).catch(() => {
-                this.$message({
-                    type: 'info',
-                    message: '取消输入'
-                });
-            });
         },
         messageboxOperate(row, name) {
             this.$confirm(`是否${name}实例${row.name}`, '提示', {
@@ -480,12 +386,7 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                if (name == "restart") {
-                    this.handleRestart(row.namespaces, row.name)
-                } else if (name == "delete") {
-                    this.handleDelete(row.namespaces, row.name)
-                }
-
+                this.handleDelete(row.namespaces, row.name)
             }).catch(() => {
                 this.$message({
                     type: 'info',
@@ -506,40 +407,6 @@ export default {
         },
         resetForm(formName) {
             this.$refs[formName].resetFields();
-        },
-        addContainer() {
-            this.ruleForm.container.push({
-                container_name: '',
-                image: '',
-                cpu: '0',
-                memory: '0',
-                container_port: [
-                    {
-                        port_name: '',
-                        container_port: 0,
-                        protocol: '',
-                    }
-                ]
-            })
-        },
-        addContainerPort(index) {
-            this.ruleForm.container[index].container_port.push({
-                port_name: '',
-                container_port: 0,
-                protocol: '',
-            })
-        },
-        removeContainer(item) {
-            var index = this.ruleForm.container.indexOf(item)
-            if (index !== -1) {
-                this.ruleForm.container.splice(index, 1)
-            }
-        },
-        removeContainerPort(portindex, portitem) {
-            var index = this.ruleForm.container[portindex].container_port.indexOf(portitem)
-            if (index !== -1) {
-                this.ruleForm.container[portindex].container_port.splice(index, 1)
-            }
         },
     }
 }
@@ -564,7 +431,6 @@ export default {
 }
 
 .grid-content {
-    padding: 10px;
     border-radius: 4px;
     min-height: 10px;
 }
@@ -587,10 +453,8 @@ export default {
     margin-left: 20px;
 }
 
-
 .el-table,
 .el-table__expanded-cell {
-    padding-top: 5px;
     background-color: transparent;
 }
 

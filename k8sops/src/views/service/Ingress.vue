@@ -10,18 +10,18 @@
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
                                 <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getPod()" clearable>
+                                    @visible-change="getnsselect()" @change="getIngress()" clearable>
                                     <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
                                         :value="item.namespace" style="width:100%" />
                                 </el-select>
                             </div>
                         </el-col>
                         <el-col :span="6">
-                            <!-- <div class="grid-content1 ep-bg-purple">
+                            <div class="grid-content1 ep-bg-purple">
                                 <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 18px;">
-                                    创建deployment 资源
+                                    创建 Ingress 资源
                                 </el-button>
-                            </div> -->
+                            </div>
                         </el-col>
                         <el-col :span="6"></el-col>
                         <el-col :span="6">
@@ -29,15 +29,16 @@
                                 <el-input v-model="filter_name" placeholder="Please input" class="input-with-select"
                                     clearable>
                                     <template #prepend>
-                                        <el-button icon="Search" @click="getPod()" />
+                                        <el-button icon="Search" @click="getIngress()" />
                                     </template>
                                 </el-input>
                             </div>
                         </el-col>
                     </el-row>
                 </el-col>
-                <el-table :data="podItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%" size="small">
-                    <el-table-column label="Name" width="200">
+                <el-table :data="ingressItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
+                    size="small">
+                    <el-table-column label="Name" width="300" align="center">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
                                 <el-icon>
@@ -47,23 +48,23 @@
                             </div>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Images" width="200" align="center">
+                    <el-table-column label="labels" width="300" align="center">
                         <template #default="scope">
-                            <div v-for="(v, k) in scope.row.image " :key="k">{{ v }}<br></div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="labels" width="270" align="center">
-                        <template #default="scope">
-                            <el-tag class="ml-2" size="small" v-for="(v, k) in scope.row.labels" :key="k">{{ k }}:{{ v
+                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
                             }}<br></el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Node" prop="node" width="110" />
-                    <el-table-column label="Status" prop="status" width="80" />
-                    <el-table-column label="Restart" prop="restart" width="60" />
-                    <el-table-column label="RCpu" prop="cpu" width="50" />
-                    <el-table-column label="RMemory" prop="memory" width="80" />
-                    <el-table-column label="Age" prop="age" width="50" />
+                    <el-table-column label="Endpoints" width="200" align="center">
+                        <template #default="scope">
+                            <div v-for="(v, k) in scope.row.endpoint " :key="k">{{ v.ip }}<br></div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="Hosts" width="200" align="center">
+                        <template #default="scope">
+                            <div v-for="(v, k) in scope.row.host " :key="k">{{ v }}<br></div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="Age" prop="age" width="70" align="center" />
                     <el-table-column label="Operations" align="center">
                         <template #default="scope">
                             <el-dropdown>
@@ -74,12 +75,6 @@
                                     <el-dropdown-menu>
                                         <el-dropdown-item icon="Edit"
                                             @click="dialogFormVisible = true, handleEdit(scope.row.namespace, scope.row.name)">编辑</el-dropdown-item>
-                                        <el-dropdown-item icon="DocumentAdd"
-                                            @click="messageboxlog(scope.row.namespace, scope.row.name)">
-                                            日志
-                                        </el-dropdown-item>
-                                        <el-dropdown-item icon="Refresh"
-                                            @click="messageboxshell(scope.row.namespace, scope.row.name)">shell</el-dropdown-item>
                                         <el-dropdown-item icon="Delete"
                                             @click="messageboxOperate(scope.row, 'delete')">删除</el-dropdown-item>
                                     </el-dropdown-menu>
@@ -88,6 +83,19 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
+                        v-model="data" height="400px" />
+                    <template #footer>
+                        <span class="dialog-footer">
+                            <el-button type="primary"
+                                @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                            <el-button @click="dialogFormVisible = false">
+                                取消
+                            </el-button>
+                        </span>
+                    </template>
+                </el-dialog>
                 <el-row>
                     <el-col :span="6">
                         <div class="grid-content ep-bg-purple" />
@@ -106,23 +114,69 @@
                         </div>
                     </el-col>
                 </el-row>
-
             </div>
+
+            <el-dialog v-model="dialogcreatens" title="创建资源" center>
+                <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm"
+                    status-icon>
+                    <el-form-item label="名称" prop="name" style="width: 80%;">
+                        <el-input v-model="ruleForm.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="名称空间" prop="namespace" style="width: 80%;">
+                        <el-select v-model="ruleForm.namespace" placeholder="请选择名称空间" @visible-change="getnsselect()">
+                            <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
+                                :value="item.namespace" v-show="item.label != 'All'" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="标签" prop="labels" style="width: 80%;">
+                        <el-input v-model="ruleForm.labels"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Class" prop="Class" style="width: 80%;">
+                        <el-select v-model="ruleForm.ingress_class_name" placeholder="请选择Class">
+                            <el-option v-for="item in ingressclasslist" :key="item.value" :label="item.label"
+                                :value="item.value" />
+                        </el-select>
+                    </el-form-item>
+
+                    <el-form-item v-for="(rules, index) in ruleForm.rules" :label="'Rules'" :key="rules.key">
+                        <el-form-item style="width: 100%;" v-show="index == 0">
+                            <el-tooltip placement="right"><template #content> 新增Rules </template>
+                                <el-button @click="addRules" type="success" circle icon="Plus" size="small"></el-button>
+                            </el-tooltip>
+                            <el-tooltip placement="right"><template #content> 删除Rules </template>
+                                <el-button @click.prevent="removeRules(rules)" type="danger" icon="Minus" size="small"
+                                    circle v-show="isremove" />
+                            </el-tooltip>
+                        </el-form-item>
+                        <el-form-item label="Host" prop="port_name" style="width: 77%;">
+                            <el-input v-model="rules.host"></el-input>
+                        </el-form-item>
+                        <el-form-item v-for="(values, index) in rules.http_ingress_rule_values" :label="'HttpValue'"
+                            :key="values.key">
+                            <el-form-item label="Path" style="width: 73%;">
+                                <el-input v-model="values.path"></el-input>
+                            </el-form-item>
+                            <el-form-item label="svcname" style="width: 73%;">
+                                <el-input v-model="values.service_name"></el-input>
+                            </el-form-item>
+                            <el-form-item label="svcport" style="width: 73%;">
+                                <el-input v-model.number="values.service_port"></el-input>
+                            </el-form-item>
+                        </el-form-item>
+
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="submitForm('ruleForm')">立即创建</el-button>
+                        <el-button @click="resetForm('ruleForm')">立即重置</el-button>
+                        <el-button type="danger" @click="dialogcreatens = false">
+                            取消
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+            </el-dialog>
+
         </el-col>
     </el-row>
-    <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
-            height="400px" />
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button type="primary"
-                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
-                <el-button @click="dialogFormVisible = false">
-                    取消
-                </el-button>
-            </span>
-        </template>
-    </el-dialog>
 </template>
 
 <script scoped>
@@ -140,32 +194,39 @@ export default {
             },
             dialogFormVisible: false,
             dialogcreatens: false,
-            podItem: [],
+            ingressItem: [],
             filter_name: '',
             namespace: '',
             limit: 10,
             page: 1,
             nslist: [],
+            isremove: false,
+            isvalueremove: false,
             total: 0,
             page_size: [1, 10, 20, 50, 100],
-            ruleForm: {
-                name: '',
-                namespace: '',
-                replicas: 0,
-                labels: {
-                    "app": "demo"
+            ingressclasslist: [
+                {
+                    "value": 'nginx',
+                    "label": 'nginx'
                 },
-                container: [
+                {
+                    "value": 'nginx-example',
+                    "label": 'nginx-example'
+                }
+            ],
+            ruleForm: {
+                name: null,
+                namespace: null,
+                labels: {},
+                ingress_class_name: null,
+                rules: [
                     {
-                        container_name: '',
-                        image: '',
-                        cpu: '0',
-                        memory: '0',
-                        container_port: [
+                        host: null,
+                        http_ingress_rule_values: [
                             {
-                                port_name: '',
-                                container_port: 0,
-                                protocol: '',
+                                path: null,
+                                service_name: null,
+                                service_port: null
                             }
                         ]
                     }
@@ -173,29 +234,29 @@ export default {
             },
             rules: {
                 name: [
-                    { required: true, message: '请输入资源名称', trigger: 'blur' },
-                    { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+                    { required: true, message: '请输入资源名称', trigger: 'change' },
+                    { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'change' }
                 ],
                 namespace: [
                     { required: true, message: '请选择名称空间', trigger: 'change' }
                 ],
-                replica: [
-                    { required: true, message: '请输入副本数量', trigger: 'change' }
-                ],
                 resource: [
                     { message: '请选择一种协议', trigger: 'change' }
+                ],
+                type: [
+                    { required: true, message: '请选择一种服务类型', trigger: 'change' }
                 ],
             }
         }
     },
     created() {
-        this.getPod()
+        this.getIngress()
     },
     methods: {
-        getPod() {
+        getIngress() {
             this.$ajax({
                 method: 'get',
-                url: '/pod/list',
+                url: '/ing/list',
                 params: {
                     filter_name: this.filter_name,
                     namespace: this.namespace,
@@ -203,16 +264,15 @@ export default {
                     page: this.page,
                 }
             }).then((res) => {
-                console.log(res.data.item)
                 this.total = res.data.total
-                this.podItem = res.data.item
+                this.ingressItem = res.data.item
             }).catch(function (res) {
                 console.log(res);
             })
         },
-        createDeployment() {
+        createIngress() {
             this.$ajax.post(
-                '/deploy/create',
+                '/ing/create',
                 {
                     data: this.ruleForm
                 },
@@ -222,14 +282,13 @@ export default {
                     message: res.msg,
                     type: 'success'
                 });
-            }).catch(function (res) {
+
+            }).catch((res) => {
                 this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.msg,
                     type: 'error'
                 });
             })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -240,6 +299,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
@@ -258,85 +318,34 @@ export default {
         },
         handleSizeChange(limit) {
             this.limit = limit
-            this.getPod()
+            this.getIngress()
         },
         handleCurrentChange(page) {
             this.page = page
-            this.getPod()
+            this.getIngress()
         },
         handleEdit(namespace, name) {
             this.$ajax({
                 method: 'get',
-                url: '/pod/detail',
+                url: '/ing/detail',
                 params: {
-                    pod_name: name,
+                    ingress_name: name,
                     namespace: namespace
                 }
             }).then((res) => {
                 this.data = res.data
                 console.log(res.data);
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res.data);
             })
         },
-        handleReplica(namespace, name, replicas) {
-            this.$ajax.put(
-                '/deploy/modify',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                    replicas: replicas
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-        },
-        handleRestart(namespace, name) {
-            this.Loading("Restarting······")
-            this.$ajax.post(
-                '/deploy/restart',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-
-        },
         handleDelete(namespace, name) {
-            this.Loading("Deleting······")
             this.$ajax({
                 method: 'delete',
-                url: '/deploy/delete',
+                url: '/ing/delete',
                 params: {
                     namespace: namespace,
-                    deploy_name: name
+                    ingress_name: name,
                 }
             }
             ).then((res) => {
@@ -346,21 +355,24 @@ export default {
                     message: res.msg,
                     type: 'warning'
                 });
-            }).catch(function (res) {
-                console.log(res);
+            }).catch((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.reason,
+                    type: 'error'
+                });
             })
-            this.reload()
 
         },
         handleUpdate(namespace) {
-            this.Loading("Updateing")
             this.$ajax.put(
-                '/pod/update',
+                '/ing/update',
                 {
                     namespace: namespace,
                     data: this.data
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -370,31 +382,9 @@ export default {
             }).catch((res) => {
                 this.$message({
                     showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.reason,
                     type: 'error'
                 });
-                console.log(res);
-            })
-            this.reload()
-        },
-        messageboxlog(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/log',
-                name: 'logs',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
-            })
-        },
-        messageboxshell(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/shell',
-                name: 'shell',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
             })
         },
         messageboxOperate(row, name) {
@@ -403,7 +393,7 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                this.handleDelete(row.namespaces, row.name)
+                this.handleDelete(row.namespace, row.name)
             }).catch(() => {
                 this.$message({
                     type: 'info',
@@ -416,7 +406,7 @@ export default {
                 if (valid) {
                     this.dialogcreatens = false
                     console.log(this.ruleForm)
-                    this.createDeployment()
+                    this.createIngress()
                 } else {
                     return false;
                 }
@@ -425,38 +415,49 @@ export default {
         resetForm(formName) {
             this.$refs[formName].resetFields();
         },
-        addContainer() {
-            this.ruleForm.container.push({
-                container_name: '',
-                image: '',
-                cpu: '0',
-                memory: '0',
-                container_port: [
+        addRules() {
+            this.ruleForm.rules.push({
+                host: null,
+                http_ingress_rule_values: [
                     {
-                        port_name: '',
-                        container_port: 0,
-                        protocol: '',
+                        path: null,
+                        service_name: null,
+                        service_port: null
                     }
                 ]
             })
+            this.isremove = true
         },
-        addContainerPort(index) {
-            this.ruleForm.container[index].container_port.push({
-                port_name: '',
-                container_port: 0,
-                protocol: '',
-            })
-        },
-        removeContainer(item) {
-            var index = this.ruleForm.container.indexOf(item)
+        removeRules(item) {
+            var arr = new Array();
+            var index = this.ruleForm.rules.indexOf(item)
             if (index !== -1) {
-                this.ruleForm.container.splice(index, 1)
+                this.ruleForm.rules.splice(index, 1)
             }
+            arr = this.ruleForm.rules
+            if (arr.length == 1) {
+                this.isremove = false
+            }
+
+
         },
-        removeContainerPort(portindex, portitem) {
-            var index = this.ruleForm.container[portindex].container_port.indexOf(portitem)
+        addValue(index) {
+            this.ruleForm.rules[index].http_ingress_rule_values.push({
+                path: null,
+                service_name: null,
+                service_port: null
+            })
+            this.isvalueremove = true
+        },
+        removeValue(item, i) {
+            var arr = new Array();
+            var index = this.ruleForm.rules[i].http_ingress_rule_values.indexOf(item)
             if (index !== -1) {
-                this.ruleForm.container[portindex].container_port.splice(index, 1)
+                this.ruleForm.rules[i].http_ingress_rule_values.splice(index, 1)
+            }
+            arr = this.ruleForm.rules[i].http_ingress_rule_values
+            if (arr.length == 1) {
+                this.isvalueremove = false
             }
         },
     }
@@ -482,9 +483,9 @@ export default {
 }
 
 .grid-content {
+    padding: 10px;
     border-radius: 4px;
     min-height: 10px;
-    padding: 10px;
 }
 
 .el-row:last-child {
@@ -492,22 +493,24 @@ export default {
 }
 
 .grid-content1 {
+
     border-radius: 4px;
 }
 
 .grid-content2 {
+
     border-radius: 4px;
 }
 
 .grid-content3 {
-    position: relative;
+    position: fixed;
     margin-top: 5px;
     margin-left: 20px;
 }
 
 .el-table,
 .el-table__expanded-cell {
-    padding-top: 5px;
+    margin-top: 5px;
     background-color: transparent;
 }
 
@@ -525,15 +528,26 @@ export default {
     margin-right: 10px;
 }
 
-.el-dialog--center .el-dialog__body {
+.el-dialog--center {
+    min-height: 400px;
+    min-width: 200px;
+}
+
+.el-dialog__body {
     min-height: 400px;
 }
 
 .demo-pagination-block+.demo-pagination-block {
+    float: right;
+    margin-right: 10px;
     margin-top: 10px;
 }
 
-.el-form-item__content .el-input {
-    width: 400px;
+.grid-content3 .el-select {
+    width: 100px;
 }
+
+/* .el-form-item__content .el-input {
+    width: 500px;
+} */
 </style>

@@ -2,7 +2,7 @@
     <el-row>
         <el-col :span="24">
             <div class="grid-content bg-purple">
-                <el-table :data="persistentvolumeItem" :header-cell-style="{ background: '#e6e7e9' }">
+                <el-table :data="persistentvolumeItem" :header-cell-style="{ background: '#e6e7e9' }" size="small">
                     <el-table-column label="Name" min-width="370">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
@@ -40,23 +40,42 @@
                         </template>
                     </el-table-column>
                 </el-table>
-                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
-                        v-model="data" height="400px" />
-                    <template #footer>
-                        <span class="dialog-footer">
-                            <el-button type="primary"
-                                @click="dialogFormVisible = false, updatePersistentVolume()">更新</el-button>
-                            <el-button @click="dialogFormVisible = false">
-                                取消
+                <el-row>
+                    <el-col :span="6">
+                        <div class="grid-content ep-bg-purple">
+                            <el-button type="primary" @click="dialogcreatens = true">
+                                创建资源
                             </el-button>
-                        </span>
-                    </template>
-                </el-dialog>
+                        </div>
+                    </el-col>
+                    <el-col :span="6">
+                        <div class="grid-content ep-bg-purple-light" />
+                    </el-col>
+                    <el-col :span="6">
+                        <div class="grid-content ep-bg-purple" />
+                    </el-col>
+                    <el-col :span="6">
+                        <div class="grid-content3">
+                            <el-pagination v-model:current-page="page" v-model:page-size="limit" :page-sizes="page_size"
+                                small background layout="sizes, prev, pager, next" :total="total"
+                                @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+                        </div>
+                    </el-col>
+                </el-row>
             </div>
-            <el-button type="primary" @click="dialogcreatens = true">
-                创建资源
-            </el-button>
+            <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
+                    v-model="data" height="400px" />
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button type="primary"
+                            @click="dialogFormVisible = false, updatePersistentVolume()">更新</el-button>
+                        <el-button @click="dialogFormVisible = false">
+                            取消
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
             <el-dialog v-model="dialogcreatens" title="创建 PersistentVolume 资源" center>
                 <el-form :model="form" :label-width="formLabelWidth">
                     <el-form-item label="名称">
@@ -129,7 +148,11 @@ export default {
                 path: '',
                 server: '',
             },
-            formLabelWidth: '140px'
+            formLabelWidth: '140px',
+            total: 1,
+            page_size: [1, 10, 20, 50, 100],
+            limit: 10,
+            page: 1,
         }
     },
     created() {
@@ -244,7 +267,13 @@ export default {
         },
         changedisshow() {
             this.showEl = false
-        }
+        },
+        handleSizeChange(limit) {
+            this.limit = limit
+        },
+        handleCurrentChange(page) {
+            this.page = page
+        },
     }
 }
 </script>
@@ -287,12 +316,9 @@ export default {
     margin-right: 15px;
 }
 
-.el-select {
-    width: 300px;
-}
 
 .el-input {
-    width: 400px;
+    width: 80%;
 }
 
 .dialog-footer button:first-child {
@@ -300,10 +326,14 @@ export default {
 }
 
 .el-dialog--center .el-dialog__body {
-    min-height: 400px;
+    min-height: 200px;
 }
 
 .el-select .el-input {
     width: 120px;
+}
+
+.grid-content3 .el-select {
+    width: 100px;
 }
 </style>

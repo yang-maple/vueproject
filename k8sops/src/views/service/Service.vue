@@ -10,34 +10,36 @@
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
                                 <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getPod()" clearable>
+                                    @visible-change="getnsselect()" @change="getSevices()" clearable>
                                     <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
-                                        :value="item.namespace" style="width:100%" />
+                                        :value="item.namespace" />
                                 </el-select>
                             </div>
                         </el-col>
                         <el-col :span="6">
-                            <!-- <div class="grid-content1 ep-bg-purple">
+                            <div class="grid-content1 ep-bg-purple">
                                 <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 18px;">
-                                    创建deployment 资源
+                                    创建Sevices 资源
                                 </el-button>
-                            </div> -->
+                            </div>
                         </el-col>
-                        <el-col :span="6"></el-col>
+                        <el-col :span="6">
+
+                        </el-col>
                         <el-col :span="6">
                             <div class="grid-content1 ep-bg-purple">
                                 <el-input v-model="filter_name" placeholder="Please input" class="input-with-select"
                                     clearable>
                                     <template #prepend>
-                                        <el-button icon="Search" @click="getPod()" />
+                                        <el-button icon="Search" @click="getSevices()" />
                                     </template>
                                 </el-input>
                             </div>
                         </el-col>
                     </el-row>
                 </el-col>
-                <el-table :data="podItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%" size="small">
-                    <el-table-column label="Name" width="200">
+                <el-table :data="serviceItem" :header-cell-style="{ background: '#e6e7e9' }" size="small">
+                    <el-table-column label="Name" prop="name" width="220" align="center">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
                                 <el-icon>
@@ -47,24 +49,22 @@
                             </div>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Images" width="200" align="center">
+                    <el-table-column label="Namespace" prop="namespace" width="150" align="center" />
+                    <el-table-column label="labels" width="300" align="center">
                         <template #default="scope">
-                            <div v-for="(v, k) in scope.row.image " :key="k">{{ v }}<br></div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="labels" width="270" align="center">
-                        <template #default="scope">
-                            <el-tag class="ml-2" size="small" v-for="(v, k) in scope.row.labels" :key="k">{{ k }}:{{ v
+                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
                             }}<br></el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Node" prop="node" width="110" />
-                    <el-table-column label="Status" prop="status" width="80" />
-                    <el-table-column label="Restart" prop="restart" width="60" />
-                    <el-table-column label="RCpu" prop="cpu" width="50" />
-                    <el-table-column label="RMemory" prop="memory" width="80" />
-                    <el-table-column label="Age" prop="age" width="50" />
-                    <el-table-column label="Operations" align="center">
+                    <el-table-column label="Type" prop="type" width="110" align="center" />
+                    <el-table-column label="ClusterIP" prop="cluster_ip" width="110" align="center" />
+                    <el-table-column label="ExternalIP" width="110" align="center">
+                        <template #default="scope">
+                            <div v-for="(v, k) in scope.row.external_ip " :key="k">{{ v }}<br></div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="Age" prop="age" width="50" align="center" />
+                    <el-table-column label="Operations" min-width="180" align="center">
                         <template #default="scope">
                             <el-dropdown>
                                 <el-button type="primary">
@@ -74,12 +74,6 @@
                                     <el-dropdown-menu>
                                         <el-dropdown-item icon="Edit"
                                             @click="dialogFormVisible = true, handleEdit(scope.row.namespace, scope.row.name)">编辑</el-dropdown-item>
-                                        <el-dropdown-item icon="DocumentAdd"
-                                            @click="messageboxlog(scope.row.namespace, scope.row.name)">
-                                            日志
-                                        </el-dropdown-item>
-                                        <el-dropdown-item icon="Refresh"
-                                            @click="messageboxshell(scope.row.namespace, scope.row.name)">shell</el-dropdown-item>
                                         <el-dropdown-item icon="Delete"
                                             @click="messageboxOperate(scope.row, 'delete')">删除</el-dropdown-item>
                                     </el-dropdown-menu>
@@ -88,6 +82,19 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
+                        v-model="data" height="400px" />
+                    <template #footer>
+                        <span class="dialog-footer">
+                            <el-button type="primary"
+                                @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                            <el-button @click="dialogFormVisible = false">
+                                取消
+                            </el-button>
+                        </span>
+                    </template>
+                </el-dialog>
                 <el-row>
                     <el-col :span="6">
                         <div class="grid-content ep-bg-purple" />
@@ -101,28 +108,78 @@
                     <el-col :span="8">
                         <div class="demo-pagination-block">
                             <el-pagination v-model:current-page="page" v-model:page-size="limit" :page-sizes="page_size"
-                                small background layout="sizes, prev, pager, next" :total="total" :pager-count="5"
+                                :pager-count="5" small background layout="sizes, prev, pager, next" :total="total"
                                 @size-change="handleSizeChange" @current-change="handleCurrentChange" />
                         </div>
                     </el-col>
                 </el-row>
-
             </div>
+
+            <el-dialog v-model="dialogcreatens" title="创建资源" center>
+                <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm"
+                    status-icon>
+                    <el-form-item label="名称" prop="name" style="width: 80%;">
+                        <el-input v-model="ruleForm.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="名称空间" prop="namespace" style="width: 80%;">
+                        <el-select v-model="ruleForm.namespace" placeholder="请选择名称空间" @visible-change="getnsselect()">
+                            <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
+                                :value="item.namespace" v-show="item.label != 'All'" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="标签" prop="labels" style="width: 80%;">
+                        <el-input v-model="ruleForm.labels"></el-input>
+                    </el-form-item>
+                    <el-form-item label="类型" prop="type" style="width: 80%;">
+                        <el-select v-model="ruleForm.type" placeholder="请选择服务类型">
+                            <el-option v-for="item in typelist" :key="item.value" :label="item.label" :value="item.value" />
+                        </el-select>
+                    </el-form-item>
+
+                    <el-form-item v-for="(service, index) in ruleForm.service_ports" :label="'端口' + (index + 1)"
+                        :key="service.key">
+                        <el-form-item label="容器名称" prop="port_name" style="width: 70%;">
+                            <el-input v-model="service.port_name"></el-input>
+                        </el-form-item>
+                        <el-form-item label="服务端口" prop="ports" style="width: 70%;">
+                            <el-input v-model.number="service.port"></el-input>
+                        </el-form-item>
+                        <el-form-item label="协议" prop="resource" style="width: 70%;">
+                            <el-radio-group v-model="service.protocol">
+                                <el-radio label="TCP"></el-radio>
+                                <el-radio label="UDP"></el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="暴露端口" style="width: 70%;">
+                            <el-input type="number" v-model.number="service.target_port"></el-input>
+                        </el-form-item>
+                        <el-form-item label="访问端口" style="width: 70%;"
+                            v-show="ruleForm.type == 'NodePort' || ruleForm.type == 'LoadBalancer'">
+                            <el-input type="number" v-model.number="service.node_port"></el-input>
+                        </el-form-item>
+                        <el-form-item style="width: 80%;">
+                            <el-tooltip placement="right"><template #content> 删除端口 </template>
+                                <el-button @click.prevent="removeService(service)" type="danger" icon="Minus" size="small"
+                                    circle />
+                            </el-tooltip>
+                        </el-form-item>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-tooltip placement="right"><template #content> 新增端口 </template>
+                            <el-button @click="addService" type="success" circle icon="Plus" size="small"></el-button>
+                        </el-tooltip>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="submitForm('ruleForm')">立即创建</el-button>
+                        <el-button @click="resetForm('ruleForm')">立即重置</el-button>
+                        <el-button type="danger" @click="dialogcreatens = false">
+                            取消
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+            </el-dialog>
         </el-col>
     </el-row>
-    <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
-            height="400px" />
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button type="primary"
-                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
-                <el-button @click="dialogFormVisible = false">
-                    取消
-                </el-button>
-            </span>
-        </template>
-    </el-dialog>
 </template>
 
 <script scoped>
@@ -140,7 +197,7 @@ export default {
             },
             dialogFormVisible: false,
             dialogcreatens: false,
-            podItem: [],
+            serviceItem: [],
             filter_name: '',
             namespace: '',
             limit: 10,
@@ -148,54 +205,52 @@ export default {
             nslist: [],
             total: 0,
             page_size: [1, 10, 20, 50, 100],
-            ruleForm: {
-                name: '',
-                namespace: '',
-                replicas: 0,
-                labels: {
-                    "app": "demo"
+            typelist: [
+                {
+                    value: 'ClusterIP',
+                    label: 'ClusterIP'
                 },
-                container: [
-                    {
-                        container_name: '',
-                        image: '',
-                        cpu: '0',
-                        memory: '0',
-                        container_port: [
-                            {
-                                port_name: '',
-                                container_port: 0,
-                                protocol: '',
-                            }
-                        ]
-                    }
-                ],
+                {
+                    value: 'NodePort',
+                    label: 'NodePort'
+                },
+                {
+                    value: 'LoadBalancer',
+                    label: 'LoadBalancer'
+                }
+            ],
+            ruleForm: {
+                name: null,
+                namespace: null,
+                labels: {},
+                type: null,
+                service_ports: [],
             },
             rules: {
                 name: [
-                    { required: true, message: '请输入资源名称', trigger: 'blur' },
-                    { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+                    { required: true, message: '请输入资源名称', trigger: 'change' },
+                    { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'change' }
                 ],
                 namespace: [
                     { required: true, message: '请选择名称空间', trigger: 'change' }
                 ],
-                replica: [
-                    { required: true, message: '请输入副本数量', trigger: 'change' }
-                ],
                 resource: [
                     { message: '请选择一种协议', trigger: 'change' }
+                ],
+                type: [
+                    { required: true, message: '请选择一种服务类型', trigger: 'change' }
                 ],
             }
         }
     },
     created() {
-        this.getPod()
+        this.getSevices()
     },
     methods: {
-        getPod() {
+        getSevices() {
             this.$ajax({
                 method: 'get',
-                url: '/pod/list',
+                url: '/svc/list',
                 params: {
                     filter_name: this.filter_name,
                     namespace: this.namespace,
@@ -203,16 +258,15 @@ export default {
                     page: this.page,
                 }
             }).then((res) => {
-                console.log(res.data.item)
                 this.total = res.data.total
-                this.podItem = res.data.item
+                this.serviceItem = res.data.item
             }).catch(function (res) {
                 console.log(res);
             })
         },
-        createDeployment() {
+        createService() {
             this.$ajax.post(
-                '/deploy/create',
+                '/svc/create',
                 {
                     data: this.ruleForm
                 },
@@ -222,14 +276,13 @@ export default {
                     message: res.msg,
                     type: 'success'
                 });
-            }).catch(function (res) {
+
+            }).catch((res) => {
                 this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.msg,
                     type: 'error'
                 });
             })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -240,6 +293,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
@@ -258,18 +312,18 @@ export default {
         },
         handleSizeChange(limit) {
             this.limit = limit
-            this.getPod()
+            this.getSevices()
         },
         handleCurrentChange(page) {
             this.page = page
-            this.getPod()
+            this.getSevices()
         },
         handleEdit(namespace, name) {
             this.$ajax({
                 method: 'get',
-                url: '/pod/detail',
+                url: '/svc/detail',
                 params: {
-                    pod_name: name,
+                    service_name: name,
                     namespace: namespace
                 }
             }).then((res) => {
@@ -279,64 +333,13 @@ export default {
                 console.log(res.data);
             })
         },
-        handleReplica(namespace, name, replicas) {
-            this.$ajax.put(
-                '/deploy/modify',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                    replicas: replicas
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-        },
-        handleRestart(namespace, name) {
-            this.Loading("Restarting······")
-            this.$ajax.post(
-                '/deploy/restart',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-
-        },
         handleDelete(namespace, name) {
-            this.Loading("Deleting······")
             this.$ajax({
                 method: 'delete',
-                url: '/deploy/delete',
+                url: '/svc/delete',
                 params: {
                     namespace: namespace,
-                    deploy_name: name
+                    service_name: name
                 }
             }
             ).then((res) => {
@@ -346,21 +349,24 @@ export default {
                     message: res.msg,
                     type: 'warning'
                 });
-            }).catch(function (res) {
-                console.log(res);
+            }).catch((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.reason,
+                    type: 'error'
+                });
             })
-            this.reload()
 
         },
         handleUpdate(namespace) {
-            this.Loading("Updateing")
             this.$ajax.put(
-                '/pod/update',
+                '/svc/update',
                 {
                     namespace: namespace,
                     data: this.data
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -370,31 +376,9 @@ export default {
             }).catch((res) => {
                 this.$message({
                     showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.reason,
                     type: 'error'
                 });
-                console.log(res);
-            })
-            this.reload()
-        },
-        messageboxlog(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/log',
-                name: 'logs',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
-            })
-        },
-        messageboxshell(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/shell',
-                name: 'shell',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
             })
         },
         messageboxOperate(row, name) {
@@ -403,7 +387,7 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                this.handleDelete(row.namespaces, row.name)
+                this.handleDelete(row.namespace, row.name)
             }).catch(() => {
                 this.$message({
                     type: 'info',
@@ -416,7 +400,7 @@ export default {
                 if (valid) {
                     this.dialogcreatens = false
                     console.log(this.ruleForm)
-                    this.createDeployment()
+                    this.createService()
                 } else {
                     return false;
                 }
@@ -425,38 +409,20 @@ export default {
         resetForm(formName) {
             this.$refs[formName].resetFields();
         },
-        addContainer() {
-            this.ruleForm.container.push({
-                container_name: '',
-                image: '',
-                cpu: '0',
-                memory: '0',
-                container_port: [
-                    {
-                        port_name: '',
-                        container_port: 0,
-                        protocol: '',
-                    }
-                ]
+        addService() {
+            this.ruleForm.service_ports.push({
+                port_name: null,
+                port: null,
+                protocol: null,
+                target_port: null,
+                node_port: null
             })
         },
-        addContainerPort(index) {
-            this.ruleForm.container[index].container_port.push({
-                port_name: '',
-                container_port: 0,
-                protocol: '',
-            })
-        },
-        removeContainer(item) {
-            var index = this.ruleForm.container.indexOf(item)
+        removeService(item) {
+            console.log(item)
+            var index = this.ruleForm.service_ports.indexOf(item)
             if (index !== -1) {
-                this.ruleForm.container.splice(index, 1)
-            }
-        },
-        removeContainerPort(portindex, portitem) {
-            var index = this.ruleForm.container[portindex].container_port.indexOf(portitem)
-            if (index !== -1) {
-                this.ruleForm.container[portindex].container_port.splice(index, 1)
+                this.ruleForm.service_ports.splice(index, 1)
             }
         },
     }
@@ -492,27 +458,33 @@ export default {
 }
 
 .grid-content1 {
+
     border-radius: 4px;
 }
 
 .grid-content2 {
+
     border-radius: 4px;
 }
 
 .grid-content3 {
-    position: relative;
     margin-top: 5px;
     margin-left: 20px;
 }
 
+.grid-content3 .el-select {
+    width: 100px;
+}
+
 .el-table,
 .el-table__expanded-cell {
-    padding-top: 5px;
+    margin-top: 5px;
     background-color: transparent;
 }
 
 .el-table th,
 .el-table tr {
+
     background-color: transparent;
 }
 
@@ -525,15 +497,23 @@ export default {
     margin-right: 10px;
 }
 
-.el-dialog--center .el-dialog__body {
+.el-dialog--center {
     min-height: 400px;
+    min-width: 200px;
+}
+
+.el-dialog__body {
+    min-height: 300px;
 }
 
 .demo-pagination-block+.demo-pagination-block {
+    float: right;
+    margin-right: 10px;
     margin-top: 10px;
 }
 
-.el-form-item__content .el-input {
-    width: 400px;
-}
+
+/* .el-form-item__content .el-input {
+    width: 500px;
+} */
 </style>

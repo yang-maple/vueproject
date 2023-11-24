@@ -2,8 +2,7 @@
     <el-row>
         <el-col :span="24">
             <div class="grid-content bg-purple">
-                <el-table :data="namespacesItem" :header-cell-style="{ background: '#e6e7e9' }" size="small"
-                    style="width: 100%">
+                <el-table :data="namespacesItem" :header-cell-style="{ background: '#e6e7e9' }" size="small">
                     <el-table-column label="Name" width="200">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
@@ -26,8 +25,8 @@
                         <template #default="scope">
                             <el-button type="primary" icon="Edit" plain
                                 @click="dialogFormVisible = true, handleEdit(scope.$index, scope.row)" />
-                            <el-popconfirm confirm-button-text="OK" cancel-button-text="No, Thanks" icon="InfoFilled"
-                                icon-color="#626AEF" title="Are you sure to delete this?"
+                            <el-popconfirm width="230" confirm-button-text="OK" cancel-button-text="No, Thanks"
+                                icon="InfoFilled" icon-color="#626AEF" title="Are you sure to delete this?"
                                 @confirm="handleDelete(scope.row)"><template #reference>
                                     <el-button type="danger" icon="Delete" plain />
                                 </template>
@@ -37,7 +36,7 @@
                 </el-table>
                 <el-row>
                     <el-col :span="6">
-                        <div>
+                        <div class="grid-content ep-bg-purple">
                             <el-button type="primary" @click="dialogcreatens = true">
                                 创建名称空间
                             </el-button>
@@ -46,48 +45,47 @@
                     <el-col :span="6">
                         <div class="grid-content ep-bg-purple-light" />
                     </el-col>
-                    <el-col :span="4">
+                    <el-col :span="6">
                         <div class="grid-content ep-bg-purple" />
                     </el-col>
-                    <el-col :span="8">
-                        <div class="demo-pagination-block">
+                    <el-col :span="6">
+                        <div class="grid-content3">
                             <el-pagination v-model:current-page="page" v-model:page-size="limit" :page-sizes="page_size"
-                                small background layout="sizes, prev, pager, next" :total="total" :pager-count="5"
+                                small background layout="sizes, prev, pager, next" :total="total"
                                 @size-change="handleSizeChange" @current-change="handleCurrentChange" />
                         </div>
                     </el-col>
                 </el-row>
             </div>
+            <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                <json-editor-vue v-loading="bookingLoad" :show-btns="false" :mode="'code'" style="height:400px" lang="zh"
+                    class="editor" v-model="data" height="400px" />
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button type="primary" @click="dialogFormVisible = false, updateNamespace()">更新</el-button>
+                        <el-button @click="dialogFormVisible = false">
+                            取消
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
+            <el-dialog v-model="dialogcreatens" title="创建名称空间" center>
+                <el-form :model="form">
+                    <el-form-item label="名称" :label-width="formLabelWidth">
+                        <el-input v-model="form.newnamespaces" autocomplete="off" />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button type="primary" @click="dialogcreatens = false, createNamespace()">确认创建</el-button>
+                        <el-button type="danger" @click="dialogcreatens = false">
+                            取消
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
         </el-col>
     </el-row>
-    <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
-            height="400px" />
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button type="primary"
-                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
-                <el-button @click="dialogFormVisible = false">
-                    取消
-                </el-button>
-            </span>
-        </template>
-    </el-dialog>
-    <el-dialog v-model="dialogcreatens" title="创建名称空间" center>
-        <el-form :model="form">
-            <el-form-item label="名称" :label-width="formLabelWidth" style="width: 80%;">
-                <el-input v-model="form.newnamespaces" autocomplete="off" />
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button type="primary" @click="dialogcreatens = false, createNamespace()">确认创建</el-button>
-                <el-button type="danger" @click="dialogcreatens = false">
-                    取消
-                </el-button>
-            </span>
-        </template>
-    </el-dialog>
 </template>
 
 <script scoped>
@@ -255,19 +253,6 @@ export default {
 .grid-content {
     border-radius: 4px;
     min-height: 10px;
-    padding: 10px;
-}
-
-.el-row:last-child {
-    margin-bottom: 0;
-}
-
-.grid-content3 {
-    border-radius: 4px;
-}
-
-.grid-content3 .el-select {
-    width: 100px;
 }
 
 .el-table,
@@ -284,20 +269,25 @@ export default {
     margin-right: 15px;
 }
 
+.el-select {
+    width: 300px;
+}
+
+.el-input {
+    width: 80%;
+}
 
 .dialog-footer button:first-child {
     margin-right: 10px;
 }
 
-.el-dialog--center {
-    min-height: 10px;
+.el-dialog--center .el-dialog__body {
+    min-height: 30px;
+    min-width: 100px;
+
 }
 
-.el-dialog__body {
-    min-height: 100px;
-}
-
-.demo-pagination-block+.demo-pagination-block {
-    margin-top: 10px;
+.grid-content3 .el-select {
+    width: 100px;
 }
 </style>

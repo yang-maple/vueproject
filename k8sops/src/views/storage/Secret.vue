@@ -9,19 +9,22 @@
                         </el-col>
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
-                                <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getPod()" clearable>
-                                    <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
-                                        :value="item.namespace" style="width:100%" />
+                                <el-select v-model="namespace" placeholder="Select" @visible-change="getnsselect()"
+                                    @change="getSecret()">
+                                    <el-option-group v-for="group in nslist" :key="group.label" :label="group.label">
+                                        <el-option v-for="item in group.options" :key="item.namespace" :label="item.label"
+                                            :value="item.namespace" />
+                                    </el-option-group>
                                 </el-select>
                             </div>
                         </el-col>
+
                         <el-col :span="6">
-                            <!-- <div class="grid-content1 ep-bg-purple">
-                                <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 18px;">
-                                    创建deployment 资源
+                            <div class="grid-content1 ep-bg-purple">
+                                <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 20px;">
+                                    创建 Secret 资源
                                 </el-button>
-                            </div> -->
+                            </div>
                         </el-col>
                         <el-col :span="6"></el-col>
                         <el-col :span="6">
@@ -29,15 +32,16 @@
                                 <el-input v-model="filter_name" placeholder="Please input" class="input-with-select"
                                     clearable>
                                     <template #prepend>
-                                        <el-button icon="Search" @click="getPod()" />
+                                        <el-button icon="Search" @click="getSecret()" />
                                     </template>
                                 </el-input>
                             </div>
                         </el-col>
                     </el-row>
                 </el-col>
-                <el-table :data="podItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%" size="small">
-                    <el-table-column label="Name" width="200">
+                <el-table :data="secretItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
+                    size="small">
+                    <el-table-column label="Name" width="300" align="center">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
                                 <el-icon>
@@ -47,23 +51,27 @@
                             </div>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Images" width="200" align="center">
+                    <el-table-column label="namespace" prop="namespace" width="200" align="center" />
+                    <el-table-column label="labels" width="300" align="center">
                         <template #default="scope">
-                            <div v-for="(v, k) in scope.row.image " :key="k">{{ v }}<br></div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="labels" width="270" align="center">
-                        <template #default="scope">
-                            <el-tag class="ml-2" size="small" v-for="(v, k) in scope.row.labels" :key="k">{{ k }}:{{ v
+                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
                             }}<br></el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Node" prop="node" width="110" />
-                    <el-table-column label="Status" prop="status" width="80" />
-                    <el-table-column label="Restart" prop="restart" width="60" />
-                    <el-table-column label="RCpu" prop="cpu" width="50" />
-                    <el-table-column label="RMemory" prop="memory" width="80" />
-                    <el-table-column label="Age" prop="age" width="50" />
+                    <el-table-column label="修改" prop="immutable" width="50" align="center">
+                        <template #default="scope">
+                            <span slot="reference" v-if="scope.row.immutable != true">
+                                <el-tooltip placement="right"><template #content> 支持修改 </template>
+                                    <i class="dotClass" style="background-color: springgreen"></i></el-tooltip>
+                            </span>
+                            <span slot="reference" v-if="scope.row.immutable == true">
+                                <el-tooltip placement="right"><template #content> 禁止修改 </template>
+                                    <i class="dotClass" style="background-color: red"></i></el-tooltip>
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="Age" prop="age" width="122" align="center" />
+                    <el-table-column label="Type" prop="type" width="100" align="center" />
                     <el-table-column label="Operations" align="center">
                         <template #default="scope">
                             <el-dropdown>
@@ -74,12 +82,6 @@
                                     <el-dropdown-menu>
                                         <el-dropdown-item icon="Edit"
                                             @click="dialogFormVisible = true, handleEdit(scope.row.namespace, scope.row.name)">编辑</el-dropdown-item>
-                                        <el-dropdown-item icon="DocumentAdd"
-                                            @click="messageboxlog(scope.row.namespace, scope.row.name)">
-                                            日志
-                                        </el-dropdown-item>
-                                        <el-dropdown-item icon="Refresh"
-                                            @click="messageboxshell(scope.row.namespace, scope.row.name)">shell</el-dropdown-item>
                                         <el-dropdown-item icon="Delete"
                                             @click="messageboxOperate(scope.row, 'delete')">删除</el-dropdown-item>
                                     </el-dropdown-menu>
@@ -88,12 +90,28 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
+                        v-model="data" height="400px" />
+                    <template #footer>
+                        <span class="dialog-footer">
+                            <el-button type="primary"
+                                @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                            <el-button @click="dialogFormVisible = false">
+                                取消
+                            </el-button>
+                        </span>
+                    </template>
+                </el-dialog>
                 <el-row>
-                    <el-col :span="6">
+                    <el-col :span="4">
                         <div class="grid-content ep-bg-purple" />
                     </el-col>
-                    <el-col :span="6">
+                    <el-col :span="4">
                         <div class="grid-content ep-bg-purple-light" />
+                    </el-col>
+                    <el-col :span="4">
+                        <div class="grid-content ep-bg-purple" />
                     </el-col>
                     <el-col :span="4">
                         <div class="grid-content ep-bg-purple" />
@@ -101,28 +119,51 @@
                     <el-col :span="8">
                         <div class="demo-pagination-block">
                             <el-pagination v-model:current-page="page" v-model:page-size="limit" :page-sizes="page_size"
-                                small background layout="sizes, prev, pager, next" :total="total" :pager-count="5"
+                                :pager-count="5" small background layout="sizes, prev, pager, next" :total="total"
                                 @size-change="handleSizeChange" @current-change="handleCurrentChange" />
                         </div>
                     </el-col>
                 </el-row>
-
             </div>
+
+            <el-dialog v-model="dialogcreatens" title="创建资源" center>
+                <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm"
+                    status-icon>
+                    <el-form-item label="名称" prop="name" style="width: 80%;">
+                        <el-input v-model="ruleForm.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="名称空间" prop="namespace" style="width: 80%;">
+                        <el-select v-model="ruleForm.namespace" placeholder="Select" @visible-change="getnsselect()">
+                            <el-option-group v-for="group in  nslist " :key="group.label">
+                                <el-option v-for=" item  in  group.options " :key="item.namespace" :value="item.namespace"
+                                    v-show="item.label != 'ALL'" />
+                            </el-option-group>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="标签" prop="labels" style="width: 80%;">
+                        <el-input v-model="ruleForm.labels"></el-input>
+                    </el-form-item>
+                    <el-form-item label="数据" prop="data" style="width: 80%;">
+                        <el-input v-model="ruleForm.data" type="textarea" :rows="4"></el-input>
+                    </el-form-item>
+                    <el-form-item label="禁止修改">
+                        <el-switch v-model="ruleForm.immutable" />
+                    </el-form-item>
+                    <el-form-item label="类型" style="width: 30%;">
+                        <el-input v-model="ruleForm.secretType" disabled placeholder="Opaque" />
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="submitForm('ruleForm')">立即创建</el-button>
+                        <el-button @click="resetForm('ruleForm')">立即重置</el-button>
+                        <el-button type="danger" @click="dialogcreatens = false, resetForm('ruleForm')">
+                            取消
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+            </el-dialog>
+
         </el-col>
     </el-row>
-    <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
-            height="400px" />
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button type="primary"
-                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
-                <el-button @click="dialogFormVisible = false">
-                    取消
-                </el-button>
-            </span>
-        </template>
-    </el-dialog>
 </template>
 
 <script scoped>
@@ -140,62 +181,56 @@ export default {
             },
             dialogFormVisible: false,
             dialogcreatens: false,
-            podItem: [],
+            secretItem: [],
             filter_name: '',
             namespace: '',
             limit: 10,
             page: 1,
             nslist: [],
             total: 0,
+            storage_type: 'Gi',
             page_size: [1, 10, 20, 50, 100],
-            ruleForm: {
-                name: '',
-                namespace: '',
-                replicas: 0,
-                labels: {
-                    "app": "demo"
+            storageclasslist: [
+                {
+                    value: 'standard',
+                    label: 'standard'
                 },
-                container: [
-                    {
-                        container_name: '',
-                        image: '',
-                        cpu: '0',
-                        memory: '0',
-                        container_port: [
-                            {
-                                port_name: '',
-                                container_port: 0,
-                                protocol: '',
-                            }
-                        ]
-                    }
-                ],
+                {
+                    value: 'nfs-client',
+                    label: 'nfs-client'
+                },
+            ],
+            ruleForm: {
+                name: null,
+                namespace: '',
+                labels: {},
+                data: {},
+                immutable: false,
+                secretType: 'Opaque',
             },
             rules: {
                 name: [
                     { required: true, message: '请输入资源名称', trigger: 'blur' },
-                    { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+                    { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur' }
                 ],
                 namespace: [
                     { required: true, message: '请选择名称空间', trigger: 'change' }
                 ],
-                replica: [
-                    { required: true, message: '请输入副本数量', trigger: 'change' }
-                ],
                 resource: [
                     { message: '请选择一种协议', trigger: 'change' }
                 ],
+
             }
         }
     },
     created() {
-        this.getPod()
+        this.getSecret()
     },
     methods: {
-        getPod() {
+        getSecret() {
             this.$ajax({
                 method: 'get',
-                url: '/pod/list',
+                url: '/secret/list',
                 params: {
                     filter_name: this.filter_name,
                     namespace: this.namespace,
@@ -203,33 +238,31 @@ export default {
                     page: this.page,
                 }
             }).then((res) => {
-                console.log(res.data.item)
                 this.total = res.data.total
-                this.podItem = res.data.item
-            }).catch(function (res) {
+                this.secretItem = res.data.item
+            }).catch((res) => {
                 console.log(res);
             })
         },
-        createDeployment() {
+        createSecret() {
             this.$ajax.post(
-                '/deploy/create',
+                '/secret/create',
                 {
                     data: this.ruleForm
                 },
             ).then((res) => {
+                this.dialogcreatens = false
                 this.Loading("Creating")
                 this.$message({
                     message: res.msg,
                     type: 'success'
                 });
-            }).catch(function (res) {
+            }).catch((res) => {
                 this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.msg,
                     type: 'error'
                 });
             })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -240,17 +273,31 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
-                this.nslist.push({ 'namespace': '', 'label': "All" })
+                this.nslist.push({
+                    label: '',
+                    options: [
+                        {
+                            namespace: '',
+                            label: 'ALL',
+                        },
+                    ],
+                })
                 this.$ajax({
                     method: 'get',
                     url: '/namespaces/list',
                 }).then((res) => {
-                    res.data.item.forEach(v => {
-                        this.nslist.push({ 'namespace': v.name, 'label': v.name })
+                    this.nslist.push({
+                        label: '',
+                        options: [],
                     })
+                    res.data.item.forEach(v => {
+                        this.nslist[1].options.push({ 'namespace': v.name, 'label': v.name })
+                    })
+                    console.log(this.nslist)
                 }).catch((res) => {
                     console.log(res.data)
                 })
@@ -258,85 +305,34 @@ export default {
         },
         handleSizeChange(limit) {
             this.limit = limit
-            this.getPod()
+            this.getSecret()
         },
         handleCurrentChange(page) {
             this.page = page
-            this.getPod()
+            this.getSecret()
         },
         handleEdit(namespace, name) {
             this.$ajax({
                 method: 'get',
-                url: '/pod/detail',
+                url: '/secret/detail',
                 params: {
-                    pod_name: name,
+                    secret_name: name,
                     namespace: namespace
                 }
             }).then((res) => {
                 this.data = res.data
                 console.log(res.data);
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res.data);
             })
         },
-        handleReplica(namespace, name, replicas) {
-            this.$ajax.put(
-                '/deploy/modify',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                    replicas: replicas
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-        },
-        handleRestart(namespace, name) {
-            this.Loading("Restarting······")
-            this.$ajax.post(
-                '/deploy/restart',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-
-        },
         handleDelete(namespace, name) {
-            this.Loading("Deleting······")
             this.$ajax({
                 method: 'delete',
-                url: '/deploy/delete',
+                url: '/secret/delete',
                 params: {
                     namespace: namespace,
-                    deploy_name: name
+                    secret_name: name
                 }
             }
             ).then((res) => {
@@ -346,21 +342,24 @@ export default {
                     message: res.msg,
                     type: 'warning'
                 });
-            }).catch(function (res) {
-                console.log(res);
+            }).catch((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.msg,
+                    type: 'error'
+                });
             })
-            this.reload()
 
         },
         handleUpdate(namespace) {
-            this.Loading("Updateing")
             this.$ajax.put(
-                '/pod/update',
+                '/secret/update',
                 {
                     namespace: namespace,
                     data: this.data
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -370,31 +369,9 @@ export default {
             }).catch((res) => {
                 this.$message({
                     showClose: true,
-                    message: res.msg + res.reason,
+                    message: res.msg,
                     type: 'error'
                 });
-                console.log(res);
-            })
-            this.reload()
-        },
-        messageboxlog(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/log',
-                name: 'logs',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
-            })
-        },
-        messageboxshell(namespace, name) {
-            this.$router.push({
-                path: '/workload/pod/shell',
-                name: 'shell',
-                query: {
-                    namespace: namespace,
-                    pod_name: name
-                }
             })
         },
         messageboxOperate(row, name) {
@@ -403,7 +380,7 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                this.handleDelete(row.namespaces, row.name)
+                this.handleDelete(row.namespace, row.name)
             }).catch(() => {
                 this.$message({
                     type: 'info',
@@ -414,9 +391,10 @@ export default {
         submitForm(formName) {
             this.$refs[formName].validate((valid) => {
                 if (valid) {
-                    this.dialogcreatens = false
                     console.log(this.ruleForm)
-                    this.createDeployment()
+                    let jsdata = JSON.parse(this.ruleForm.data);
+                    this.ruleForm.data = jsdata
+                    this.createSecret()
                 } else {
                     return false;
                 }
@@ -424,40 +402,6 @@ export default {
         },
         resetForm(formName) {
             this.$refs[formName].resetFields();
-        },
-        addContainer() {
-            this.ruleForm.container.push({
-                container_name: '',
-                image: '',
-                cpu: '0',
-                memory: '0',
-                container_port: [
-                    {
-                        port_name: '',
-                        container_port: 0,
-                        protocol: '',
-                    }
-                ]
-            })
-        },
-        addContainerPort(index) {
-            this.ruleForm.container[index].container_port.push({
-                port_name: '',
-                container_port: 0,
-                protocol: '',
-            })
-        },
-        removeContainer(item) {
-            var index = this.ruleForm.container.indexOf(item)
-            if (index !== -1) {
-                this.ruleForm.container.splice(index, 1)
-            }
-        },
-        removeContainerPort(portindex, portitem) {
-            var index = this.ruleForm.container[portindex].container_port.indexOf(portitem)
-            if (index !== -1) {
-                this.ruleForm.container[portindex].container_port.splice(index, 1)
-            }
         },
     }
 }
@@ -492,22 +436,24 @@ export default {
 }
 
 .grid-content1 {
+
     border-radius: 4px;
 }
 
 .grid-content2 {
+
     border-radius: 4px;
 }
 
 .grid-content3 {
-    position: relative;
+    position: fixed;
     margin-top: 5px;
     margin-left: 20px;
 }
 
 .el-table,
 .el-table__expanded-cell {
-    padding-top: 5px;
+    margin-top: 5px;
     background-color: transparent;
 }
 
@@ -525,15 +471,31 @@ export default {
     margin-right: 10px;
 }
 
-.el-dialog--center .el-dialog__body {
+.el-dialog--center {
+    min-height: 400px;
+    min-width: 200px;
+}
+
+.el-dialog__body {
     min-height: 400px;
 }
 
 .demo-pagination-block+.demo-pagination-block {
+    float: right;
+    margin-right: 10px;
     margin-top: 10px;
 }
 
-.el-form-item__content .el-input {
-    width: 400px;
+
+.dotClass {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: block;
+    margin-left: 10px;
 }
+
+/* .el-form-item__content .el-input {
+    width: 500px;
+} */
 </style>

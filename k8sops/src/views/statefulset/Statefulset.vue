@@ -10,18 +10,13 @@
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
                                 <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getDeployment()" clearable>
+                                    @visible-change="getnsselect()" @change="getStatefulset()" clearable>
                                     <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
                                         :value="item.namespace" style="width:100%" />
                                 </el-select>
                             </div>
                         </el-col>
                         <el-col :span="6">
-                            <div class="grid-content1 ep-bg-purple">
-                                <el-button type="primary" @click="dialogcreatens = true" style="margin-left: 20px;">
-                                    创建deployment 资源
-                                </el-button>
-                            </div>
                         </el-col>
                         <el-col :span="6"></el-col>
                         <el-col :span="6">
@@ -29,14 +24,14 @@
                                 <el-input v-model="filter_name" placeholder="Please input" class="input-with-select"
                                     clearable>
                                     <template #prepend>
-                                        <el-button icon="Search" @click="getDeployment()" />
+                                        <el-button icon="Search" @click="getStatefulset()" />
                                     </template>
                                 </el-input>
                             </div>
                         </el-col>
                     </el-row>
                 </el-col>
-                <el-table :data="deploymentItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
+                <el-table :data="statefulItem" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%"
                     size="small">
                     <el-table-column label="Name" width="200">
                         <template #default="scope">
@@ -76,8 +71,6 @@
                                         <el-dropdown-item icon="DocumentAdd" @click="messageboxReplica(scope.row)">
                                             副本
                                         </el-dropdown-item>
-                                        <el-dropdown-item icon="Refresh"
-                                            @click="messageboxOperate(scope.row, 'restart')">重启</el-dropdown-item>
                                         <el-dropdown-item icon="Delete"
                                             @click="messageboxOperate(scope.row, 'delete')">删除</el-dropdown-item>
                                     </el-dropdown-menu>
@@ -105,105 +98,21 @@
                     </el-col>
                 </el-row>
             </div>
-            <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-                <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
-                    v-model="data" height="400px" />
-                <template #footer>
-                    <span class="dialog-footer">
-                        <el-button type="primary"
-                            @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
-                        <el-button @click="dialogFormVisible = false">
-                            取消
-                        </el-button>
-                    </span>
-                </template>
-            </el-dialog>
-            <el-dialog v-model="dialogcreatens" title="创建资源" center>
-                <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm"
-                    status-icon>
-                    <el-form-item label="名称" prop="name">
-                        <el-input v-model="ruleForm.name"></el-input>
-                    </el-form-item>
-                    <el-form-item label="名称空间" prop="namespace">
-                        <el-select v-model="ruleForm.namespace" placeholder="请选择活动区域" @visible-change="getnsselect()">
-                            <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
-                                :value="item.namespace" style="width:100%" v-show="item.label != 'All'" />
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="副本">
-                        <el-input-number v-model="ruleForm.replicas" :min="1" :max="99" style="width: 200px;" />
-                    </el-form-item>
-                    <el-form-item v-for="(container, index) in ruleForm.container" :label="'容器' + index"
-                        :key="container.key">
-                        <el-form-item v-show="index == 0">
-                        </el-form-item>
-                        <el-form-item label="容器名称" prop="container_name">
-                            <el-input v-model="container.container_name" style="width: 300px;"></el-input>
-                            <el-tooltip placement="right"><template #content> 删除容器 </template>
-                                <el-button @click.prevent="removeContainer(container)" type="danger" icon="Minus"
-                                    size="small" circle />
-                            </el-tooltip>
-                        </el-form-item>
-                        <el-form-item label="镜像" prop="image">
-                            <el-input v-model="container.image" style="width: 300px;"></el-input>
-                        </el-form-item>
-                        <el-form-item label="Cpu限制">
-                            <el-input v-model="container.cpu" style="width: 300px;"></el-input>
-                        </el-form-item>
-                        <el-form-item label="Memory限制">
-                            <el-input v-model="container.memory" style="width: 300px;"></el-input>
-                        </el-form-item>
-                        <el-form-item :label="'端口' + portindex"
-                            v-for="(containerport, portindex) in ruleForm.container[index].container_port"
-                            :key="containerport.key">
-                            <el-form-item label="端口名称">
-                                <el-input v-model="containerport.port_name" style="width: 80%;"></el-input>
-                                <el-tooltip placement="right"><template #content> 删除端口 </template>
-                                    <el-button @click.prevent="removeContainerPort(index, containerport)" type="danger"
-                                        icon="Minus" size="small" circle></el-button>
-                                </el-tooltip>
-                            </el-form-item>
-                            <el-form-item label="端口">
-                                <el-input type="number" v-model.number="containerport.container_port"
-                                    style="width: 90%;"></el-input>
-                            </el-form-item>
-                            <el-form-item label="协议" prop="resource">
-                                <el-radio-group v-model="containerport.protocol">
-                                    <el-radio label="TCP"></el-radio>
-                                    <el-radio label="UDP"></el-radio>
-                                </el-radio-group>
-                            </el-form-item>
-                        </el-form-item>
-                        <el-form-item>
-                            <el-tooltip placement="right"><template #content> 新增端口 </template>
-                                <el-button @click="addContainerPort(index)" type="success" circle icon="Plus" size="small"
-                                    style="margin-left: 50px;" />
-                            </el-tooltip>
-                        </el-form-item>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-tooltip placement="right"><template #content> 新增容器 </template>
-                            <el-button @click="addContainer" type="success" circle icon="Plus" size="small"></el-button>
-                        </el-tooltip>
-                    </el-form-item>
-                    <el-form-item label="健康检查" prop="delivery">
-                        <el-switch v-model="ruleForm.health_check"></el-switch>
-                    </el-form-item>
-                    <el-form-item label="路径" v-show="ruleForm.health_check == true">
-                        <el-input v-model="ruleForm.health_path"></el-input>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="submitForm('ruleForm')">立即创建</el-button>
-                        <el-button @click="resetForm('ruleForm')">立即重置</el-button>
-                        <el-button type="danger" @click="dialogcreatens = false">
-                            取消
-                        </el-button>
-                    </el-form-item>
-                </el-form>
-            </el-dialog>
-
         </el-col>
     </el-row>
+    <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
+        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
+            height="400px" />
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button type="primary"
+                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                <el-button @click="dialogFormVisible = false">
+                    取消
+                </el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script scoped>
@@ -221,7 +130,7 @@ export default {
             },
             dialogFormVisible: false,
             dialogcreatens: false,
-            deploymentItem: [],
+            statefulItem: [],
             filter_name: '',
             namespace: '',
             limit: 10,
@@ -270,13 +179,13 @@ export default {
         }
     },
     created() {
-        this.getDeployment()
+        this.getStatefulset()
     },
     methods: {
-        getDeployment() {
+        getStatefulset() {
             this.$ajax({
                 method: 'get',
-                url: '/deploy/list',
+                url: '/stateful/list',
                 params: {
                     filter_name: this.filter_name,
                     namespace: this.namespace,
@@ -284,30 +193,11 @@ export default {
                     page: this.page,
                 }
             }).then((res) => {
-                console.log(res.data.item)
                 this.total = res.data.total
-                this.deploymentItem = res.data.item
+                this.statefulItem = res.data.item
             }).catch(function (res) {
                 console.log(res);
             })
-        },
-        createDeployment() {
-            this.$ajax.post(
-                '/deploy/create',
-                {
-                    data: this.ruleForm
-                },
-            ).then((res) => {
-                this.Loading("Creating")
-                this.$message({
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch(function (res) {
-                console.log(res);
-            })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -318,6 +208,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
@@ -336,18 +227,18 @@ export default {
         },
         handleSizeChange(limit) {
             this.limit = limit
-            this.getDeployment()
+            this.getStatefulset()
         },
         handleCurrentChange(page) {
             this.page = page
-            this.getDeployment()
+            this.getStatefulset()
         },
         handleEdit(namespace, name) {
             this.$ajax({
                 method: 'get',
-                url: '/deploy/detail',
+                url: '/stateful/detail',
                 params: {
-                    deploy_name: name,
+                    stateful_set_name: name,
                     namespace: namespace
                 }
             }).then((res) => {
@@ -359,13 +250,14 @@ export default {
         },
         handleReplica(namespace, name, replicas) {
             this.$ajax.put(
-                '/deploy/modify',
+                '/stateful/modify',
                 {
-                    deploy_name: name,
+                    stateful_set_name: name,
                     namespace: namespace,
                     replicas: replicas
                 },
             ).then((res) => {
+                this.Loading("Modifying")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -379,42 +271,15 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
-        },
-        handleRestart(namespace, name) {
-            this.Loading("Restarting······")
-            this.$ajax.post(
-                '/deploy/restart',
-                {
-                    deploy_name: name,
-                    namespace: namespace,
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
-            }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
-                console.log(res);
-            })
-            this.reload()
-
         },
         handleDelete(namespace, name) {
             this.Loading("Deleting······")
             this.$ajax({
                 method: 'delete',
-                url: '/deploy/delete',
+                url: '/stateful/delete',
                 params: {
                     namespace: namespace,
-                    deploy_name: name
+                    stateful_set_name: name
                 }
             }
             ).then((res) => {
@@ -431,16 +296,14 @@ export default {
 
         },
         handleUpdate(namespace) {
-            console.log(namespace);
-            console.log(this.data.metadata.namespace);
-            this.Loading("Updateing")
             this.$ajax.put(
-                '/deploy/update',
+                '/stateful/update',
                 {
                     namespace: namespace,
                     data: this.data
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -455,7 +318,6 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
         },
         messageboxReplica(row) {
             this.$prompt('修改的副本数为', '提示', {
@@ -480,12 +342,7 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
-                if (name == "restart") {
-                    this.handleRestart(row.namespaces, row.name)
-                } else if (name == "delete") {
-                    this.handleDelete(row.namespaces, row.name)
-                }
-
+                this.handleDelete(row.namespaces, row.name)
             }).catch(() => {
                 this.$message({
                     type: 'info',
@@ -564,9 +421,9 @@ export default {
 }
 
 .grid-content {
-    padding: 10px;
     border-radius: 4px;
     min-height: 10px;
+    padding: 10px;
 }
 
 .el-row:last-child {
@@ -574,10 +431,7 @@ export default {
 }
 
 .grid-content1 {
-    border-radius: 4px;
-}
 
-.grid-content2 {
     border-radius: 4px;
 }
 
@@ -587,10 +441,13 @@ export default {
     margin-left: 20px;
 }
 
+.grid-content2 {
+
+    border-radius: 4px;
+}
 
 .el-table,
 .el-table__expanded-cell {
-    padding-top: 5px;
     background-color: transparent;
 }
 

@@ -3,24 +3,23 @@
         <el-col :span="24">
             <div class="grid-content bg-purple">
                 <el-row :gutter="20">
-                    <el-col :span="2.5" style="margin-bottom: 10px;margin-top: 25px; margin-left: 10px;">
-                        Shell Container
+                    <el-col :span="1" style="margin-bottom: 10px;margin-top: 15px; margin-left: 10px;">
+                        Shell
                     </el-col>
-                    <el-col :span="4.5">
+                    <el-col :span="5" style="margin-bottom: 10px; width:100%;">
                         <div class="grid-content2 ep-bg-purple">
-                            <el-select v-model="container_name" filterable placeholder="Select"
-                                @visible-change="getcontainerselect()" @change="switchContainer()"
-                                style="margin-bottom: 10px;margin-top: 10px;">
+                            <el-select v-model="container_name" filterable placeholder="Select Container"
+                                @change="switchContainer()">
                                 <el-option v-for="(value, index) in containerItem" :key="index" :label="value"
                                     :value="value" style="width:100%" />
                             </el-select>
                         </div>
                     </el-col>
-                    <el-col :span="0.5" style="margin-bottom: 10px;margin-top: 25px;">
-                        In Pod
+                    <el-col :span="0.5" style="margin-bottom: 10px;margin-top: 15px;">
+                        In
                     </el-col>
-                    <el-col :span="5" style="margin-bottom: 10px;margin-top: 20px; width: 200px;">
-                        <el-input v-model="pod_name" disabled placeholder="Please input" />
+                    <el-col :span="5" style="margin-bottom: 10px;margin-top: 10px; width:100%;">
+                        <el-input v-model="pod_name" disabled placeholder="Pod Name" />
                     </el-col>
                     <el-col :span="3">
                     </el-col>
@@ -41,7 +40,7 @@ export default {
             term: "", // 保存terminal实例
             socketUri: 'ws://127.0.0.1:8081/ws?namespace=test&pod_name=ops-64786f5c8f-np5q7&container_name=qqq',
             rows: 100,
-            cols: 120,
+            cols: 135,
             data: '',
             submitdata: '',
             socket: '',
@@ -83,45 +82,22 @@ export default {
             term.loadAddon(fitAddon)
             fitAddon.fit()
             window.addEventListener("resize", resizeScreen)
-            term.resize(100, 100)
-            // function resizeScreen() {
-            //     try { // 窗口大小改变时，触发xterm的resize方法使自适应
-            //         term.onResize(function (evt) {
-            //             console.log(evt.cols, evt.rows)
-            //         })
-            //         console.log(Math.floor(container.clientWidth / term.renderer.dimensions.actualCellWidth))
-            //         let order = JSON.stringify({
-            //             "operation": "resize",
-            //             "data": '',
-            //             "rows": 10000,
-            //             "cols": 10000
-            //         })
-
-            //         // _this.socket.send(order)
-            //     } catch (e) {
-            //         console.log("e", e.message)
-            //     }
-            // }
-            function resizeScreen(size) {
-                try {
-                    fitAddon.fit();
-
-                    // 窗口大小改变时触发xterm的resize方法，向后端发送行列数，格式由后端决定
-                    term.onResize(size => {
-                        console.log(size.cols);
-                        console.log(size.rows)
-                    });
+            term.resize(_this.cols, _this.rows)
+            function resizeScreen() {
+                try { // 窗口大小改变时，触发xterm的resize方法使自适应
+                    let order = JSON.stringify({
+                        "operation": "resize",
+                        "data": '',
+                        "rows": _this.rows,
+                        "cols": _this.cols,
+                    })
+                    _this.socket.send(order)
                 } catch (e) {
-                    console.log("e", e.message);
+                    console.log("e", e.message)
                 }
             }
-            term.onResize(function (evt) {
-                console.log(evt.cols, evt.rows)
-            })
             _this.term = term
-            console.log(this.container_name)
             if (this.container_name != "") {
-                console.log(this.container_name)
                 _this.runFakeTerminal(false)
             }
         },
@@ -133,6 +109,7 @@ export default {
             // 初始化
             term._initialized = true
             this.socket = new WebSocket(`ws://127.0.0.1:8081/ws?namespace=${this.namespace}&pod_name=${this.pod_name}&container_name=${this.container_name}`);
+
             // 换行并输入起始符
             term.prompt = _ => {
                 if (this.jsdata.data != undefined) {
@@ -143,8 +120,8 @@ export default {
             term.writeln("Welcome to \x1b[1;32m墨天轮\x1b[0m.")
             term.writeln('This is Web Terminal of Modb; Good Good Study, Day Day Up.')
             term.prompt()
-
             term.focus();
+
             // 添加事件监听器，支持输入方法
             term.onKey(e => {
                 const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey
@@ -174,12 +151,12 @@ export default {
                     let order = JSON.stringify({
                         "operation": "stdin",
                         "data": this.submitdata,
-                        "rows": this.rows,
-                        "cols": this.cols
+                        "rows": 0,
+                        "cols": 0
                     })
+                    console.log(order)
                     _this.socket.send(order)
                 }
-
             })
             const messageHandler = (event) => {
                 // Handle the received data here
@@ -190,29 +167,22 @@ export default {
                     // _this.term.write("\r\n\x1b[33m$\x1b[0m ")
                 }
             };
+            let resize = JSON.stringify({
+                "operation": "resize",
+                "data": '',
+                "rows": _this.rows * 100,
+                "cols": _this.cols,
+            })
             _this.socket.removeEventListener('message', messageHandler, true);
             _this.socket.addEventListener('message', messageHandler);
             term.onSelectionChange(() => {
+                _this.socket.send(resize)
                 term.focus();
             })
             term.onLineFeed(() => {
             })
             term.onBinary((data) => {
                 console.log('Received binary data:', data);
-            })
-        },
-        getcontainerselect() {
-            this.$ajax({
-                method: 'get',
-                url: '/pod/container/list',
-                params: {
-                    namespace: this.namespace,
-                    pod_name: this.pod_name
-                }
-            }).then((res) => {
-                this.containerItem = res.item
-            }).catch(function (res) {
-                console.log(res);
             })
         },
         switchContainer() {
@@ -235,8 +205,8 @@ export default {
                     pod_name: this.pod_name
                 }
             }).then((res) => {
+                this.containerItem = res.item
                 this.container_name = res.item[0]
-                console.log(this.container_name, this.pod_name, this.namespace)
                 this.initXterm()
             }).catch(function (res) {
                 console.log(res);
