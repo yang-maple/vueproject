@@ -2,12 +2,12 @@
     <el-row>
         <el-col :span="24">
             <div class="grid-content bg-purple">
-                <el-row :gutter="20">
-                    <el-col :span="1" style="margin-bottom: 10px;margin-top: 15px; margin-left: 10px;">
+                <el-row>
+                    <el-col :span="1" class="grid-content3">
                         Logs
                     </el-col>
-                    <el-col :span="5" style="margin-bottom: 10px; width:100%;">
-                        <div class="grid-content2 ep-bg-purple">
+                    <el-col :span="3">
+                        <div class="grid-content">
                             <el-select v-model="container_name" filterable placeholder="Select Container"
                                 @change="switchContainer()">
                                 <el-option v-for="(value, index) in containerItem" :key="index" :label="value"
@@ -15,16 +15,16 @@
                             </el-select>
                         </div>
                     </el-col>
-                    <el-col :span="0.5" style="margin-bottom: 10px;margin-top: 15px;">
+                    <el-col :span="1" class="grid-content2">
                         In
                     </el-col>
-                    <el-col :span="5" style="margin-bottom: 10px;margin-top: 10px; width:100%;">
+                    <el-col :span="5" class="grid-content">
                         <el-input v-model="pod_name" disabled placeholder="Pod Name" />
                     </el-col>
-                    <el-col :span="10">
+                    <el-col :span="11">
                     </el-col>
-                    <el-col :span="2" style="margin-bottom: 10px;margin-top: 10px;">
-                        <el-select v-model="refreshtimeValue" placeholder="5s" size="small" @change="switchRefreshtime()">
+                    <el-col :span="2" class="grid-content">
+                        <el-select v-model="refreshtimeValue" placeholder="5s" @change="switchRefreshtime()">
                             <template #prefix>
                                 <el-icon>
                                     <Timer />
@@ -101,10 +101,8 @@ export default {
         }
     },
     unmounted() {
-        console.log("开始毁灭")
         clearInterval(this.positionTimer);
         this.positionTimer = null;
-        console.log("已销毁")
     },
     methods: {
         initXterm() {
@@ -230,6 +228,7 @@ export default {
             }).catch(function (res) {
                 console.log(res);
             })
+            console.log("ing")
         },
         switchRefreshtime() {
             let _this = this
@@ -262,7 +261,18 @@ export default {
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
 
+.grid-content3 {
+    margin-left: 5px;
+    margin-top: 10px;
+}
+
+.grid-content2 {
+    margin-left: 30px;
+    margin-top: 10px;
+}
+
 .grid-content {
+    margin-top: 5px;
     border-radius: 4px;
     min-height: 10px;
 }

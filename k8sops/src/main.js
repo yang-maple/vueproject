@@ -13,11 +13,13 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 //导入图标视图
 import * as ElIcons from '@element-plus/icons-vue'
-
-
+//导入particles
+import Particles from 'particles.vue3'
 import 'default-passive-events'
+
 const app = createApp(App)
 app.use(router)
+app.use(Particles)
 app.mount('#app')
 
 // 将图标引入成全局组件

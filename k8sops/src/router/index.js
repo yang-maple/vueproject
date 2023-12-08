@@ -27,51 +27,57 @@ const routes = [
         meta: { title: '工作负载', requireAuth: true },
         children: [
             {
-                path: '/workload/deployment',
+                path: '/deployment',
                 name: "deployment",
                 component: () => import('@/views/deployment/Deployment.vue'),
                 icon: 'el-icon-s-data',
                 meta: { title: 'Deployment', requireAuth: true },
             },
             {
-                path: '/workload/pod',
+                path: '/pod',
                 name: 'pod',
-                component: () => import('@/views/pod/Pod.vue'),
+                component: () => import('@/layout/index.vue'),
                 icon: 'el-icon-document-data',
                 meta: { title: 'Pod', requireAuth: true },
+                children: [
+                    {
+                        path: '/pod',
+                        component: () => import('@/views/pod/Pod.vue'),
+                    },
+                    {
+                        path: '/pod/shell',
+                        name: 'shell',
+                        component: () => import('@/views/pod/Xtrem.vue'),
+                        meta: {
+                            title: 'shell',
+                            requireAuth: false
+                        }
+                    },
+                    {
+                        path: '/pod/log',
+                        name: 'logs',
+                        component: () => import('@/views/pod/Xlogs.vue'),
+                        meta: {
+                            title: 'logs',
+                            requireAuth: false
+                        }
+                    }
+                ],
             },
             {
-                path: '/workload/daemonset',
+                path: '/daemonset',
                 name: "daemonset",
                 component: () => import('@/views/daemonset/Daemonset.vue'),
                 icon: 'el-icon-s-data',
                 meta: { title: 'Daemonset', requireAuth: true },
             },
             {
-                path: '/workload/statefulset',
+                path: '/statefulset',
                 name: "Statefulset",
                 component: () => import('@/views/statefulset/Statefulset.vue'),
                 icon: 'el-icon-s-data',
                 meta: { title: 'Statefulset', requireAuth: true },
             },
-            {
-                path: '/workload/pod/shell',
-                name: 'shell',
-                component: () => import('@/views/pod/Xtrem.vue'),
-                meta: {
-                    title: 'shell',
-                    requireAuth: false
-                }
-            },
-            {
-                path: '/workload/pod/log',
-                name: 'logs',
-                component: () => import('@/views/pod/Xlogs.vue'),
-                meta: {
-                    title: 'logs',
-                    requireAuth: false
-                }
-            }
         ]
     },
     {
@@ -82,32 +88,64 @@ const routes = [
         meta: { title: '集群资源', requireAuth: true },
         children: [
             {
-                path: '/cluster/node',
+                path: '/node',
                 icon: 'LocationInformation',
-                component: () => import('@/views/nodes/Node.vue'),
+                component: () => import('@/layout/index.vue'),
                 name: 'Node 节点',
                 meta: { title: 'Node', requireAuth: true },
+                children: [
+                    {
+                        path: '/node',
+                        component: () => import('@/views/nodes/Node.vue'),
+                    },
+                    {
+                        path: '/node/node_detail',
+                        name: 'node详情',
+                        icon: 'LocationInformation',
+                        component: () => import('@/views/nodes/Nodedetail.vue'),
+                        meta: { title: '集群资源', requireAuth: true },
+                    }
+                ]
             },
             {
-                path: '/cluster/node_detail',
-                name: 'node详情',
+                path: '/namespaces',
                 icon: 'LocationInformation',
-                component: () => import('@/views/nodes/Nodedetail.vue'),
-                meta: { title: '集群资源', requireAuth: true },
-            },
-            {
-                path: '/cluster/namespaces',
-                icon: 'LocationInformation',
-                component: () => import('@/views/namespace/Namespace.vue'),
+                component: () => import('@/layout/index.vue'),
                 name: 'Namespace 资源',
                 meta: { title: 'Namespace', requireAuth: true },
+                children: [
+                    {
+                        path: '/namespaces',
+                        component: () => import('@/views/namespace/Namespace.vue'),
+                    },
+                    {
+                        path: '/namespaces/namespaces_detail',
+                        name: 'namespaces详情',
+                        icon: 'LocationInformation',
+                        component: () => import('@/views/namespace/Namespacedetail.vue'),
+                        meta: { title: 'namespaces详情', requireAuth: true },
+                    }
+                ]
             },
             {
-                path: '/cluster/PersistentVolumes',
+                path: '/persistentvolume',
                 icon: 'LocationInformation',
-                component: () => import('@/views/PersistentVolume/PersistentVolumes.vue'),
+                component: () => import('@/layout/index.vue'),
                 name: 'PersistentVolume 资源',
                 meta: { title: 'PersistentVolume', requireAuth: true },
+                children: [
+                    {
+                        path: '/persistentvolume',
+                        component: () => import('@/views/PersistentVolume/PersistentVolume.vue'),
+                    },
+                    {
+                        path: '/persistentvolume/persistentvolume_detail',
+                        name: 'PersistentVolume 详情',
+                        icon: 'LocationInformation',
+                        component: () => import('@/views/PersistentVolume/PersistentVolumedetail.vue'),
+                        meta: { title: 'PersistentVolume 详情', requireAuth: true },
+                    }
+                ]
             }
         ]
     },
@@ -119,20 +157,32 @@ const routes = [
         meta: { title: '服务资源', requireAuth: true },
         children: [
             {
-                path: '/sever/services',
+                path: '/services',
                 icon: 'LocationInformation',
-                component: () => import('@/views/service/Service.vue'),
+                component: () => import('@/layout/index.vue'),
                 name: 'Services',
                 meta: { title: 'Services', requireAuth: true },
+                children: [
+                    {
+                        path: '/services',
+                        component: () => import('@/views/service/Service.vue'),
+                    },
+                    {
+                        path: '/services/services_detail',
+                        name: 'services 详情',
+                        component: () => import('@/views/service/Servicedetail.vue'),
+                        meta: { title: 'services 详情', requireAuth: true },
+                    }
+                ]
             },
             {
-                path: '/sever/ingress',
+                path: '/ingress',
                 icon: 'LocationInformation',
                 component: () => import('@/views/service/Ingress.vue'),
                 name: 'Ingress',
                 meta: { title: 'Ingress', requireAuth: true },
             }, {
-                path: '/sever/storageclass',
+                path: '/storageclass',
                 icon: 'LocationInformation',
                 component: () => import('@/views/service/Class.vue'),
                 name: 'Storageclass',
@@ -203,6 +253,15 @@ const routes = [
             requireAuth: false
         }
     },
+    {
+        path: '/login',
+        name: '登陆',
+        component: () => import('@/views/login/Login.vue'),
+        meta: {
+            title: "登陆",
+            requireAuth: false
+        }
+    }
 ]
 
 // 创建路由实例

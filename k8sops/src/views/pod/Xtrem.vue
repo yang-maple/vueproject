@@ -2,12 +2,12 @@
     <el-row>
         <el-col :span="24">
             <div class="grid-content bg-purple">
-                <el-row :gutter="20">
-                    <el-col :span="1" style="margin-bottom: 10px;margin-top: 15px; margin-left: 10px;">
-                        Shell
+                <el-row>
+                    <el-col :span="1">
+                        <div class="grid-content3">shell</div>
                     </el-col>
-                    <el-col :span="5" style="margin-bottom: 10px; width:100%;">
-                        <div class="grid-content2 ep-bg-purple">
+                    <el-col :span="3">
+                        <div class="grid-content ">
                             <el-select v-model="container_name" filterable placeholder="Select Container"
                                 @change="switchContainer()">
                                 <el-option v-for="(value, index) in containerItem" :key="index" :label="value"
@@ -15,13 +15,15 @@
                             </el-select>
                         </div>
                     </el-col>
-                    <el-col :span="0.5" style="margin-bottom: 10px;margin-top: 15px;">
+                    <el-col :span="1" class="grid-content2">
                         In
                     </el-col>
-                    <el-col :span="5" style="margin-bottom: 10px;margin-top: 10px; width:100%;">
+                    <el-col :span="5" class="grid-content ">
                         <el-input v-model="pod_name" disabled placeholder="Pod Name" />
                     </el-col>
-                    <el-col :span="3">
+                    <el-col :span="7">
+                    </el-col>
+                    <el-col :span="6">
                     </el-col>
                 </el-row>
                 <div id="terminal" ref="terminal"></div>
@@ -64,7 +66,7 @@ export default {
                 rows: _this.rows, //行数
                 cols: _this.cols, // 不指定行数，自动回车后光标从下一行开始
                 convertEol: true, //启用时，光标将设置为下一行的开头
-                // scrollback: 50, //终端中的回滚量
+                scrollback: 50, //终端中的回滚量
                 disableStdin: false, //是否应禁用输入
                 // cursorStyle: "underline", //光标样式
                 cursorBlink: true, //光标闪烁
@@ -234,7 +236,18 @@ export default {
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
 
+.grid-content3 {
+    margin-left: 5px;
+    margin-top: 10px;
+}
+
+.grid-content2 {
+    margin-left: 30px;
+    margin-top: 10px;
+}
+
 .grid-content {
+    margin-top: 5px;
     border-radius: 4px;
     min-height: 10px;
 }

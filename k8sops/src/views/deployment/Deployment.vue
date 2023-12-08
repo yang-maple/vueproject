@@ -56,8 +56,9 @@
                     </el-table-column>
                     <el-table-column label="labels" width="300" align="center">
                         <template #default="scope">
-                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
-                            }}<br></el-tag>
+                            <el-tag type="info" size="small" style="margin-left: 5px;" v-for="(v, k) in scope.row.labels "
+                                :key="k">{{ k }}:{{ v
+                                }}<br></el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column label="Status" prop="status" width="100" />
@@ -105,13 +106,17 @@
                     </el-col>
                 </el-row>
             </div>
-            <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-                <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
-                    v-model="data" height="400px" />
+            <el-dialog v-model="dialogFormVisible" title="实例详情" center>
+                <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+                    <el-tab-pane label="Yaml" name="yaml"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                            style="min-height: 350px" :theme="aceConfig.theme" :options="aceConfig.options" /></el-tab-pane>
+                    <el-tab-pane label="Json" name="json"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                            style="min-height: 350px" :theme="aceConfig.theme" :options="aceConfig.options" /></el-tab-pane>
+                </el-tabs>
                 <template #footer>
                     <span class="dialog-footer">
                         <el-button type="primary"
-                            @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                            @click="dialogFormVisible = false, handleUpdate(detailnamespace)">更新</el-button>
                         <el-button @click="dialogFormVisible = false">
                             取消
                         </el-button>
@@ -208,17 +213,17 @@
 
 <script scoped>
 import { ElFormItem, ElLoading } from 'element-plus'
-import JsonEditorVue from 'json-editor-vue3'
+import { VAceEditor } from 'vue3-ace-editor';
+import '../../ace.config.js';
+import yaml from 'js-yaml';
 export default {
     inject: ['reload'],
     components: {
-        JsonEditorVue,
+        VAceEditor
     },
     data() {
         return {
-            data: {
-                metadata: {},
-            },
+            detailnamespace: null,
             dialogFormVisible: false,
             dialogcreatens: false,
             deploymentItem: [],
@@ -226,6 +231,15 @@ export default {
             namespace: '',
             limit: 10,
             page: 1,
+            content: '',
+            aceConfig: {
+                lang: 'json',
+                theme: "cloud9_day",
+                options: {
+                    showPrintMargin: false,
+                }
+            },
+            activeName: 'json',
             nslist: [],
             total: 0,
             page_size: [1, 10, 20, 50, 100],
@@ -287,7 +301,7 @@ export default {
                 console.log(res.data.item)
                 this.total = res.data.total
                 this.deploymentItem = res.data.item
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res);
             })
         },
@@ -304,10 +318,9 @@ export default {
                     type: 'success'
                 });
                 console.log(res)
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res);
             })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -318,6 +331,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         getnsselect() {
             if (this.nslist == "") {
@@ -351,9 +365,11 @@ export default {
                     namespace: namespace
                 }
             }).then((res) => {
-                this.data = res.data
-                console.log(res.data);
-            }).catch(function (res) {
+                this.activeName = 'json'
+                this.aceConfig.lang = "json"
+                this.detailnamespace = res.data.metadata.namespace
+                this.content = JSON.stringify(res.data, null, 2)
+            }).catch((res) => {
                 console.log(res.data);
             })
         },
@@ -379,7 +395,7 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
+
         },
         handleRestart(namespace, name) {
             this.Loading("Restarting······")
@@ -404,7 +420,7 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
+
 
         },
         handleDelete(namespace, name) {
@@ -424,23 +440,23 @@ export default {
                     message: res.msg,
                     type: 'warning'
                 });
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res);
             })
-            this.reload()
-
         },
         handleUpdate(namespace) {
-            console.log(namespace);
-            console.log(this.data.metadata.namespace);
-            this.Loading("Updateing")
+            let data = this.content
+            if (this.aceConfig.lang == 'yaml') {
+                data = JSON.stringify(yaml.load(data), null, 2);
+            }
             this.$ajax.put(
                 '/deploy/update',
                 {
                     namespace: namespace,
-                    data: this.data
+                    data: JSON.parse(data)
                 },
             ).then((res) => {
+                this.Loading("Updateing")
                 this.$message({
                     showClose: true,
                     message: res.msg,
@@ -455,7 +471,6 @@ export default {
                 });
                 console.log(res);
             })
-            this.reload()
         },
         messageboxReplica(row) {
             this.$prompt('修改的副本数为', '提示', {
@@ -541,6 +556,27 @@ export default {
                 this.ruleForm.container[portindex].container_port.splice(index, 1)
             }
         },
+        yamlFormat() {
+            if (this.aceConfig.lang == "yaml") {
+                return
+            }
+            this.aceConfig.lang = "yaml"
+            this.content = yaml.dump(JSON.parse(this.content))
+        },
+        jsonFormat() {
+            if (this.aceConfig.lang == "json") {
+                return
+            }
+            this.aceConfig.lang = "json"
+            this.content = JSON.stringify(yaml.load(this.content), null, 2);
+        },
+        handleClick(tab) {
+            if (tab.props.name == "yaml") {
+                this.yamlFormat()
+                return
+            }
+            this.jsonFormat()
+        }
     }
 }
 </script>
@@ -618,5 +654,9 @@ export default {
 
 .el-form-item__content .el-input {
     width: 400px;
+}
+
+.el-tabs--border-card>.el-tabs__content {
+    padding: 0px;
 }
 </style>

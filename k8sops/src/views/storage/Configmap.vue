@@ -88,13 +88,19 @@
                         </template>
                     </el-table-column>
                 </el-table>
-                <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
-                        v-model="data" height="400px" />
+                <el-dialog v-model="dialogFormVisible" title="实例详情" center>
+                    <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+                        <el-tab-pane label="Yaml" name="yaml"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                                style="min-height: 350px" :theme="aceConfig.theme"
+                                :options="aceConfig.options" /></el-tab-pane>
+                        <el-tab-pane label="Json" name="json"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                                style="min-height: 350px" :theme="aceConfig.theme"
+                                :options="aceConfig.options" /></el-tab-pane>
+                    </el-tabs>
                     <template #footer>
                         <span class="dialog-footer">
                             <el-button type="primary"
-                                @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                                @click="dialogFormVisible = false, handleUpdate(detailnamespace)">更新</el-button>
                             <el-button @click="dialogFormVisible = false">
                                 取消
                             </el-button>
@@ -163,17 +169,17 @@
 
 <script scoped>
 import { ElFormItem, ElLoading } from 'element-plus'
-import JsonEditorVue from 'json-editor-vue3'
+import { VAceEditor } from 'vue3-ace-editor';
+import '../../ace.config.js';
+import yaml from 'js-yaml';
 export default {
     inject: ['reload'],
     components: {
-        JsonEditorVue,
+        VAceEditor
     },
     data() {
         return {
-            data: {
-                metadata: {},
-            },
+            detailnamespace: null,
             dialogFormVisible: false,
             dialogcreatens: false,
             configmapItem: [],
@@ -181,6 +187,15 @@ export default {
             namespace: '',
             limit: 10,
             page: 1,
+            content: '',
+            aceConfig: {
+                lang: 'json',
+                theme: "cloud9_day",
+                options: {
+                    showPrintMargin: false,
+                }
+            },
+            activeName: 'json',
             nslist: [],
             total: 0,
             storage_type: 'Gi',
@@ -314,8 +329,10 @@ export default {
                     namespace: namespace
                 }
             }).then((res) => {
-                this.data = res.data
-                console.log(res.data);
+                this.activeName = 'json'
+                this.aceConfig.lang = "json"
+                this.detailnamespace = res.data.metadata.namespace
+                this.content = JSON.stringify(res.data, null, 2)
             }).catch((res) => {
                 console.log(res.data);
             })
@@ -346,11 +363,15 @@ export default {
 
         },
         handleUpdate(namespace) {
+            let data = this.content
+            if (this.aceConfig.lang == 'yaml') {
+                data = JSON.stringify(yaml.load(data), null, 2);
+            }
             this.$ajax.put(
                 '/cm/update',
                 {
                     namespace: namespace,
-                    data: this.data
+                    data: JSON.parse(data)
                 },
             ).then((res) => {
                 this.Loading("Updateing")
@@ -386,8 +407,8 @@ export default {
             this.$refs[formName].validate((valid) => {
                 if (valid) {
                     console.log(this.ruleForm)
-                    let jsdata = JSON.parse(this.ruleForm.data);
-                    this.ruleForm.data = jsdata
+                    this.ruleForm.data = JSON.parse(this.ruleForm.data);
+                    this.ruleForm.labels = JSON.parse(this.ruleForm.labels);
                     this.createConfigmap()
                 } else {
                     return false;
@@ -397,6 +418,27 @@ export default {
         resetForm(formName) {
             this.$refs[formName].resetFields();
         },
+        yamlFormat() {
+            if (this.aceConfig.lang == "yaml") {
+                return
+            }
+            this.aceConfig.lang = "yaml"
+            this.content = yaml.dump(JSON.parse(this.content))
+        },
+        jsonFormat() {
+            if (this.aceConfig.lang == "json") {
+                return
+            }
+            this.aceConfig.lang = "json"
+            this.content = JSON.stringify(yaml.load(this.content), null, 2);
+        },
+        handleClick(tab) {
+            if (tab.props.name == "yaml") {
+                this.yamlFormat()
+                return
+            }
+            this.jsonFormat()
+        }
     }
 }
 </script>
@@ -485,6 +527,10 @@ export default {
     border-radius: 50%;
     display: block;
     margin-left: 10px;
+}
+
+.el-tabs--border-card>.el-tabs__content {
+    padding: 0px;
 }
 
 /* .el-form-item__content .el-input {

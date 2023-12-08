@@ -3,25 +3,32 @@
     <el-col :span="24">
       <div class="grid-content bg-purple">
         <el-table :data="tableData" :header-cell-style="{ background: '#e6e7e9' }" style="width: 100%" size="small"
-          :default-sort="{ prop: 'date', order: 'descending' }" @cell-click="handle">
-          <el-table-column label="Name" width="220" align="center">
+          :default-sort="{ prop: 'date', order: 'descending' }">
+          <el-table-column label="名称" width="150" align="center">
             <template #default="scope">
               <div style="display: flex; align-items: center">
-                <el-icon>
-                  <timer />
-                </el-icon>
-                <span style="margin-left: 10px">{{ scope.row.metadata.name }}</span>
+                <span slot="reference" v-if="scope.row.status.conditions[4].type == 'Ready'">
+                  <el-tooltip placement="bottom" effect="light"><template #content>Ready</template>
+                    <i class="dotClass" style="background-color: springgreen"></i></el-tooltip>
+                </span>
+                <span slot="reference" v-if="scope.row.status.conditions[4].type != 'Ready'">
+                  <el-tooltip placement="bottom" effect="light"><template #content> NotReady </template>
+                    <i class="dotClass" style="background-color: red"></i></el-tooltip>
+                </span>
+                <el-link style="margin-left: 10px" type="primary" :underline="false" @click="handle(scope.row)">{{
+                  scope.row.metadata.name
+                }}</el-link>
+                <!-- <span style="margin-left: 10px">{{ scope.row.metadata.name }}</span> -->
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="标签" width="350">
+          <el-table-column label="标签" width="350" align="center">
             <template #default="scope">
-              <el-tag class="ml-2" size="small" v-for="(v, k) in scope.row.metadata.labels " :key="k">{{ k }}:{{ v
+              <el-tag type="info" size="small" v-for="(v, k) in scope.row.metadata.labels " :key="k">{{ k }}:{{ v
               }}<br></el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="status.conditions[4].type" label="状态" width="100" />
-          <el-table-column prop="status.addresses[0].address" label="ip 地址" width="100" />
+          <el-table-column prop="status.conditions[4].type" label="状态" align="center" width="100" />
           <el-table-column prop="status.allocatable.cpu" align="center" label="CPU(核)" width="100" />
           <el-table-column align="center" label="可分配内存" width="100">
             <template #default="scope">
@@ -33,37 +40,10 @@
               <span> {{ node.pod[scope.row.metadata.name] }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="metadata.creationTimestamp" label="创建时间" width="200" />
-          <el-table-column prop="status.nodeInfo.kubeletVersion" label="版本" width="100" />
-          <el-table-column prop="status.nodeInfo.containerRuntimeVersion" label="镜像驱动" width="160" />
+          <el-table-column prop="metadata.creationTimestamp" align="center" label="创建时间" width="200" />
+          <el-table-column prop="status.nodeInfo.kubeletVersion" label="版本" />
         </el-table>
-        <el-row>
-          <el-col :span="4">
-            <div class="grid-content ep-bg-purple" />
-          </el-col>
-          <el-col :span="4">
-            <div class="grid-content ep-bg-purple-light" />
-          </el-col>
-          <el-col :span="4">
-            <div class="grid-content ep-bg-purple" />
-          </el-col>
-          <el-col :span="4">
-            <div class="grid-content ep-bg-purple-light" />
-          </el-col>
-          <el-col :span="3">
-            <div class="grid-content ep-bg-purple" />
-          </el-col>
-          <el-col :span="5">
-            <div class="grid-content3">
-              <el-pagination v-model:current-page="page" v-model:page-size="limit" :page-sizes="page_size" small
-                background layout="sizes, prev, pager, next" :total="total" @size-change="handleSizeChange"
-                @current-change="handleCurrentChange" />
-            </div>
-          </el-col>
-        </el-row>
       </div>
-
-
     </el-col>
   </el-row>
 </template>
@@ -87,14 +67,14 @@ export default {
     formatter(row, column) {
       return row.address;
     },
-    tableRowClassName({ row, rowIndex }) {
-      if (rowIndex === 0) {
-        return 'warning-row';
-      } else if (rowIndex === 2) {
-        return 'success-row';
-      }
-      return '';
-    },
+    // tableRowClassName({ row, rowIndex }) {
+    //   if (rowIndex === 0) {
+    //     return 'warning-row';
+    //   } else if (rowIndex === 2) {
+    //     return 'success-row';
+    //   }
+    //   return '';
+    // },
     Getnodes(name) {
       this.$ajax({
         method: 'get',
@@ -116,14 +96,12 @@ export default {
         this.tableData.forEach(v => {
           this.Getnodes(v.metadata.name)
         })
-        console.log(this.$route.path)
       }).catch(function (res) {
         console.log(res.data);
       })
     },
 
-    handle(row, column, event, cell) {
-
+    handle(row) {
       this.$router.push({
         path: '/cluster/node_detail',
         name: 'node详情',
@@ -138,9 +116,9 @@ export default {
 
 
 <style>
-.el-table__body tr:hover>td {
+/* .el-table__body tr:hover>td {
   background-color: #f0f9eb !important;
-}
+} */
 
 .el-row {
   margin-bottom: 100px;
@@ -162,6 +140,7 @@ export default {
 .grid-content {
   border-radius: 4px;
   min-height: 10px;
+  padding: 10px;
 }
 
 .el-row:last-child {
@@ -169,14 +148,12 @@ export default {
 }
 
 .grid-content1 {
-  margin-top: 10px;
+  padding-top: 10px;
   margin-right: 10px;
   border-radius: 4px;
 }
 
 .grid-content2 {
-  margin-top: 10px;
-  margin-left: 10px;
   border-radius: 4px;
 }
 
@@ -186,7 +163,6 @@ export default {
 
 .el-table,
 .el-table__expanded-cell {
-  padding: 10px;
   background-color: transparent;
 }
 
@@ -219,6 +195,13 @@ export default {
   margin-top: 10px;
 }
 
+.dotClass {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+  margin-left: 10px;
+}
 
 /* .el-form-item__content .el-input {
     width: 500px;

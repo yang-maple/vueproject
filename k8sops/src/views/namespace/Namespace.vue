@@ -2,33 +2,41 @@
     <el-row>
         <el-col :span="24">
             <div class="grid-content bg-purple">
-                <el-table :data="namespacesItem" :header-cell-style="{ background: '#e6e7e9' }" size="small"
-                    style="width: 100%">
+                <el-table :data="namespacesItem" :header-cell-style="{ background: '#e6e7e9' }" size="small">
                     <el-table-column label="Name" width="200">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
-                                <el-icon>
-                                    <timer />
-                                </el-icon>
-                                <span style="margin-left: 10px">{{ scope.row.name }}</span>
+                                <span slot="reference" v-if="scope.row.status == 'Active'">
+                                    <el-tooltip placement="bottom" effect="light"><template #content>Ready</template>
+                                        <i class="dotClass" style="background-color: springgreen"></i></el-tooltip>
+                                </span>
+                                <span slot="reference" v-if="scope.row.status != 'Active'">
+                                    <el-tooltip placement="bottom" effect="light"><template #content> NotReady </template>
+                                        <i class="dotClass" style="background-color: red"></i></el-tooltip>
+                                </span>
+                                <el-link style="margin-left: 10px" type="primary" :underline="false"
+                                    @click="handle(scope.row)">{{
+                                        scope.row.name
+                                    }}</el-link>
                             </div>
                         </template>
                     </el-table-column>
                     <el-table-column label="Lables" width="360" align="center">
                         <template #default="scope">
-                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
-                            }}<br></el-tag>
+                            <el-tag type="info" style="margin-left: 5px;" size="small" v-for="(v, k) in scope.row.labels "
+                                :key="k">{{ k }}:{{ v
+                                }}<br></el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Status" prop="status" width="180" />
-                    <el-table-column label="Age" prop="age" width="180" />
+                    <el-table-column label="Status" prop="status" width="200" align="center" />
+                    <el-table-column label="Age" prop="age" width="200" align="center" />
                     <el-table-column label="Operations" align="center">
                         <template #default="scope">
                             <el-button type="primary" icon="Edit" plain
                                 @click="dialogFormVisible = true, handleEdit(scope.$index, scope.row)" />
-                            <el-popconfirm confirm-button-text="OK" cancel-button-text="No, Thanks" icon="InfoFilled"
-                                icon-color="#626AEF" title="Are you sure to delete this?"
-                                @confirm="handleDelete(scope.row)"><template #reference>
+                            <el-popconfirm confirm-button-text="YES" cancel-button-text="No" icon="InfoFilled"
+                                icon-color="#626AEF" title="delete this?" @confirm="handleDelete(scope.row)"><template
+                                    #reference>
                                     <el-button type="danger" icon="Delete" plain />
                                 </template>
                             </el-popconfirm>
@@ -61,12 +69,15 @@
         </el-col>
     </el-row>
     <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-        <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor" v-model="data"
-            height="400px" />
+        <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+            <el-tab-pane label="Yaml" name="yaml"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                    style="min-height: 350px" :theme="aceConfig.theme" :options="aceConfig.options" /></el-tab-pane>
+            <el-tab-pane label="Json" name="json"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                    style="min-height: 350px" :theme="aceConfig.theme" :options="aceConfig.options" /></el-tab-pane>
+        </el-tabs>
         <template #footer>
             <span class="dialog-footer">
-                <el-button type="primary"
-                    @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                <el-button type="primary" @click="dialogFormVisible = false, handleUpdate()">更新</el-button>
                 <el-button @click="dialogFormVisible = false">
                     取消
                 </el-button>
@@ -92,15 +103,16 @@
 
 <script scoped>
 import { ElLoading } from 'element-plus'
-import JsonEditorVue from 'json-editor-vue3'
+import { VAceEditor } from 'vue3-ace-editor';
+import '../../ace.config.js';
+import yaml from 'js-yaml';
 export default {
     inject: ['reload'],
     components: {
-        JsonEditorVue
+        VAceEditor
     },
     data() {
         return {
-            data: {},
             namespacesItem: [],
             dialogFormVisible: false,
             dialogcreatens: false,
@@ -120,6 +132,15 @@ export default {
             page_size: [1, 10, 20, 50, 100],
             limit: 10,
             page: 1,
+            content: '',
+            aceConfig: {
+                lang: 'json',
+                theme: "cloud9_day",
+                options: {
+                    showPrintMargin: false,
+                }
+            },
+            activeName: 'json'
         }
     },
     created() {
@@ -127,7 +148,6 @@ export default {
     },
     methods: {
         handleEdit(index, row) {
-            console.log(index, row);
             this.$ajax({
                 method: 'get',
                 url: '/namespaces/detail',
@@ -135,10 +155,37 @@ export default {
                     namespace_name: row.name
                 }
             }).then((res) => {
-                this.data = res.data
+                this.activeName = 'json'
+                this.aceConfig.lang = "json"
+                this.content = JSON.stringify(res.data.detail, null, 2)
+            }).catch((res) => {
                 console.log(res.data);
-            }).catch(function (res) {
-                console.log(res.data);
+            })
+        },
+        handleUpdate() {
+            this.Loading("Updateing")
+            let data = this.content
+            if (this.aceConfig.lang == 'yaml') {
+                data = JSON.stringify(yaml.load(data), null, 2);
+            }
+            this.$ajax.put(
+                '/namespaces/update',
+                {
+                    data: JSON.parse(data)
+                },
+            ).then((res) => {
+                this.Loading("Updateing")
+                this.$message({
+                    showClose: true,
+                    message: res.msg,
+                    type: 'success'
+                });
+            }).catch((res) => {
+                this.$message({
+                    showClose: true,
+                    message: res.reason,
+                    type: 'error'
+                });
             })
         },
         handleDelete(row) {
@@ -156,11 +203,9 @@ export default {
                     message: res.msg,
                     type: 'warning'
                 });
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res);
             })
-            this.reload()
-
         },
         getNamespaces() {
             this.$ajax({
@@ -168,7 +213,7 @@ export default {
                 url: '/namespaces/list',
             }).then((res) => {
                 this.namespacesItem = res.data.item
-            }).catch(function (res) {
+            }).catch((res) => {
                 console.log(res);
             })
         },
@@ -184,35 +229,9 @@ export default {
                     message: res.msg,
                     type: 'success'
                 });
-                console.log(res)
-            }).catch(function (res) {
-                console.log(res);
-            })
-            this.reload()
-        },
-        updateNamespace() {
-            this.Loading("Updateing")
-            this.$ajax.put(
-                '/namespaces/update',
-                {
-                    data: this.data
-                },
-            ).then((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg,
-                    type: 'success'
-                });
-                console.log(res)
             }).catch((res) => {
-                this.$message({
-                    showClose: true,
-                    message: res.msg + res.reason,
-                    type: 'error'
-                });
                 console.log(res);
             })
-            this.reload()
         },
         Loading(msg) {
             const loading = ElLoading.service({
@@ -223,6 +242,7 @@ export default {
             setTimeout(() => {
                 loading.close()
             }, 2000)
+            this.reload()
         },
         handleSizeChange(limit) {
             this.limit = limit
@@ -230,6 +250,36 @@ export default {
         handleCurrentChange(page) {
             this.page = page
         },
+        handle(row) {
+            this.$router.push({
+                path: '/namespaces/namespaces_detail',
+                name: 'namespaces详情',
+                query: {
+                    namespace_name: row.name
+                }
+            })
+        },
+        yamlFormat() {
+            if (this.aceConfig.lang == "yaml") {
+                return
+            }
+            this.aceConfig.lang = "yaml"
+            this.content = yaml.dump(JSON.parse(this.content))
+        },
+        jsonFormat() {
+            if (this.aceConfig.lang == "json") {
+                return
+            }
+            this.aceConfig.lang = "json"
+            this.content = JSON.stringify(yaml.load(this.content), null, 2);
+        },
+        handleClick(tab) {
+            if (tab.props.name == "yaml") {
+                this.yamlFormat()
+                return
+            }
+            this.jsonFormat()
+        }
     }
 }
 </script>
@@ -299,5 +349,17 @@ export default {
 
 .demo-pagination-block+.demo-pagination-block {
     margin-top: 10px;
+}
+
+.dotClass {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: block;
+    margin-left: 10px;
+}
+
+.el-tabs--border-card>.el-tabs__content {
+    padding: 0px;
 }
 </style>

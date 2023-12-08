@@ -10,7 +10,7 @@
                         <el-col :span="4">
                             <div class="grid-content2 ep-bg-purple">
                                 <el-select v-model="namespace" filterable placeholder="Select"
-                                    @visible-change="getnsselect()" @change="getSevices()" clearable>
+                                    @visible-change="getnsselect()" @change="getSevices()" clearable style="width: 100%;">
                                     <el-option v-for="item in nslist" :key="item.namespace" :label="item.label"
                                         :value="item.namespace" />
                                 </el-select>
@@ -39,32 +39,42 @@
                     </el-row>
                 </el-col>
                 <el-table :data="serviceItem" :header-cell-style="{ background: '#e6e7e9' }" size="small">
-                    <el-table-column label="Name" prop="name" width="220" align="center">
+                    <el-table-column label="Name" prop="name" width="200" align="center">
                         <template #default="scope">
                             <div style="display: flex; align-items: center">
-                                <el-icon>
-                                    <timer />
-                                </el-icon>
-                                <span style="margin-left: 10px">{{ scope.row.name }}</span>
+                                <el-link size="small" type="primary" :underline="false">{{ scope.row.name
+                                }}</el-link>
                             </div>
                         </template>
                     </el-table-column>
                     <el-table-column label="Namespace" prop="namespace" width="150" align="center" />
-                    <el-table-column label="labels" width="300" align="center">
+                    <el-table-column label="labels" width="280" align="center">
                         <template #default="scope">
-                            <el-tag size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
+                            <el-tag type="info" size="small" v-for="(v, k) in scope.row.labels " :key="k">{{ k }}:{{ v
                             }}<br></el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="Type" prop="type" width="110" align="center" />
-                    <el-table-column label="ClusterIP" prop="cluster_ip" width="110" align="center" />
-                    <el-table-column label="ExternalIP" width="110" align="center">
+                    <el-table-column label="Type" prop="type" width="100" align="center" />
+                    <el-table-column label="ClusterIP" prop="cluster_ip" width="100" align="center" />
+                    <el-table-column label="ExternalIP" width="100" align="center">
                         <template #default="scope">
-                            <div v-for="(v, k) in scope.row.external_ip " :key="k">{{ v }}<br></div>
+                            <div v-if="serviceItem.external_ip == undefined">-</div>
+                            <div v-if="serviceItem.external_ip != undefined" v-for="(v, k) in scope.row.external_ip "
+                                :key="k">{{ v }}
+                            </div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="Ports" width="130" align="center">
+                        <template #default="scope">
+                            <div v-for="(v, k) in scope.row.port " :key="k">
+                                <span v-if="v.nodePort == undefined">{{ v.port }}/{{ v.protocol }}</span>
+                                <span v-if="v.nodePort != undefined">{{ v.port }} : {{ v.nodePort }} / {{ v.protocol
+                                }}</span>
+                            </div>
                         </template>
                     </el-table-column>
                     <el-table-column label="Age" prop="age" width="50" align="center" />
-                    <el-table-column label="Operations" min-width="180" align="center">
+                    <el-table-column label="Operations" align="center">
                         <template #default="scope">
                             <el-dropdown>
                                 <el-button type="primary">
@@ -83,12 +93,18 @@
                     </el-table-column>
                 </el-table>
                 <el-dialog v-model="dialogFormVisible" title="实例详情/json" center>
-                    <json-editor-vue :show-btns="false" :mode="'code'" style="height:400px" lang="zh" class="editor"
-                        v-model="data" height="400px" />
+                    <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+                        <el-tab-pane label="Yaml" name="yaml"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                                style="min-height: 350px" :theme="aceConfig.theme"
+                                :options="aceConfig.options" /></el-tab-pane>
+                        <el-tab-pane label="Json" name="json"><v-ace-editor v-model:value="content" :lang="aceConfig.lang"
+                                style="min-height: 350px" :theme="aceConfig.theme"
+                                :options="aceConfig.options" /></el-tab-pane>
+                    </el-tabs>
                     <template #footer>
                         <span class="dialog-footer">
                             <el-button type="primary"
-                                @click="dialogFormVisible = false, handleUpdate(this.data.metadata.namespace)">更新</el-button>
+                                @click="dialogFormVisible = false, handleUpdate(detailnamespace)">更新</el-button>
                             <el-button @click="dialogFormVisible = false">
                                 取消
                             </el-button>
@@ -184,17 +200,17 @@
 
 <script scoped>
 import { ElFormItem, ElLoading } from 'element-plus'
-import JsonEditorVue from 'json-editor-vue3'
+import { VAceEditor } from 'vue3-ace-editor';
+import '../../ace.config.js';
+import yaml from 'js-yaml';
 export default {
     inject: ['reload'],
     components: {
-        JsonEditorVue,
+        VAceEditor
     },
     data() {
         return {
-            data: {
-                metadata: {},
-            },
+            detailnamespace: '',
             dialogFormVisible: false,
             dialogcreatens: false,
             serviceItem: [],
@@ -202,6 +218,15 @@ export default {
             namespace: '',
             limit: 10,
             page: 1,
+            content: '',
+            aceConfig: {
+                lang: 'json',
+                theme: "cloud9_day",
+                options: {
+                    showPrintMargin: false,
+                }
+            },
+            activeName: 'json',
             nslist: [],
             total: 0,
             page_size: [1, 10, 20, 50, 100],
@@ -327,9 +352,11 @@ export default {
                     namespace: namespace
                 }
             }).then((res) => {
-                this.data = res.data
-                console.log(res.data);
-            }).catch(function (res) {
+                this.activeName = 'json'
+                this.aceConfig.lang = "json"
+                this.detailnamespace = res.data.detail.metadata.namespace
+                this.content = JSON.stringify(res.data.detail, null, 2)
+            }).catch((res) => {
                 console.log(res.data);
             })
         },
@@ -359,11 +386,15 @@ export default {
 
         },
         handleUpdate(namespace) {
+            let data = this.content
+            if (this.aceConfig.lang == 'yaml') {
+                data = JSON.stringify(yaml.load(data), null, 2);
+            }
             this.$ajax.put(
                 '/svc/update',
                 {
                     namespace: namespace,
-                    data: this.data
+                    data: JSON.parse(data)
                 },
             ).then((res) => {
                 this.Loading("Updateing")
@@ -425,6 +456,37 @@ export default {
                 this.ruleForm.service_ports.splice(index, 1)
             }
         },
+        handle(row) {
+            this.$router.push({
+                path: '/services/services_detail',
+                name: 'services 详情',
+                query: {
+                    namespace: row.namespace,
+                    service_name: row.name
+                }
+            })
+        },
+        yamlFormat() {
+            if (this.aceConfig.lang == "yaml") {
+                return
+            }
+            this.aceConfig.lang = "yaml"
+            this.content = yaml.dump(JSON.parse(this.content))
+        },
+        jsonFormat() {
+            if (this.aceConfig.lang == "json") {
+                return
+            }
+            this.aceConfig.lang = "json"
+            this.content = JSON.stringify(yaml.load(this.content), null, 2);
+        },
+        handleClick(tab) {
+            if (tab.props.name == "yaml") {
+                this.yamlFormat()
+                return
+            }
+            this.jsonFormat()
+        }
     }
 }
 </script>
@@ -512,6 +574,9 @@ export default {
     margin-top: 10px;
 }
 
+.el-tabs--border-card>.el-tabs__content {
+    padding: 0px;
+}
 
 /* .el-form-item__content .el-input {
     width: 500px;
